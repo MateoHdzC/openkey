@@ -45,6 +45,95 @@ export function createWebServer(): Hono {
     });
   });
 
+  app.post('/api/providers/custom', async (c) => {
+    const body = await c.req.json<{
+      id: string;
+      name: string;
+      baseUrl: string;
+      authType?: 'bearer' | 'api-key';
+      models?: string[];
+      apiKey?: string;
+    }>();
+
+    if (!body.id || !body.name || !body.baseUrl) {
+      return c.json({ success: false, error: 'id, name, and baseUrl are required' }, 400);
+    }
+
+    const cleanId = body.id.toLowerCase().replace(/[^a-z0-9_-]/g, '');
+    const modelList = (body.models && body.models.length > 0)
+      ? body.models.map(m => m.trim()).filter(Boolean)
+      : [`${cleanId}-default`];
+
+    configManager.addCustomProvider({
+      id: cleanId,
+      name: body.name.trim(),
+      baseUrl: body.baseUrl.trim(),
+      authType: body.authType || 'bearer',
+      models: modelList,
+    });
+
+    registry.loadCustomProviders();
+
+    if (body.apiKey && body.apiKey.trim()) {
+      const encrypted = vault.encryptSecret(cleanId, `${cleanId}-key`, body.apiKey.trim());
+      db.saveSecret(encrypted);
+    }
+
+    return c.json({
+      success: true,
+      provider: {
+        id: cleanId,
+        name: body.name.trim(),
+        defaultBaseUrl: body.baseUrl.trim(),
+        models: modelList,
+      },
+    });
+  });
+
+  app.get('/api/workspace/files', async (c) => {
+    const cwd = process.cwd();
+    try {
+      const fs = await import('node:fs');
+      const files: Array<{ name: string; path: string; isDirectory: boolean; size: number }> = [];
+      const entries = fs.readdirSync(cwd, { withFileTypes: true });
+      for (const entry of entries) {
+        if (entry.name.startsWith('.') || entry.name === 'node_modules' || entry.name === 'dist') continue;
+        const fullPath = path.join(cwd, entry.name);
+        const stat = fs.statSync(fullPath);
+        files.push({
+          name: entry.name,
+          path: entry.name,
+          isDirectory: entry.isDirectory(),
+          size: stat.size,
+        });
+      }
+      return c.json({ cwd, files });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return c.json({ error: msg }, 500);
+    }
+  });
+
+  app.post('/api/workspace/read-file', async (c) => {
+    const body = await c.req.json<{ path: string }>();
+    if (!body.path) {
+      return c.json({ error: 'Path is required' }, 400);
+    }
+    const cwd = process.cwd();
+    const target = path.resolve(cwd, body.path);
+    if (!target.startsWith(cwd)) {
+      return c.json({ error: 'Access denied: path outside workspace' }, 403);
+    }
+    try {
+      const fs = await import('node:fs');
+      const content = fs.readFileSync(target, 'utf8');
+      return c.json({ path: body.path, content });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return c.json({ error: msg }, 500);
+    }
+  });
+
   
   app.post('/api/config/active', async (c) => {
     const body = await c.req.json<{ providerId: string; modelId: string }>();

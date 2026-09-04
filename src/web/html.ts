@@ -51,6 +51,7 @@ export function getWebHtml(): string {
       --transition-normal: 220ms var(--ease);
     }
 
+    * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
       background-color: var(--bg-main);
@@ -63,9 +64,9 @@ export function getWebHtml(): string {
     }
 
     @media (prefers-reduced-motion: reduce) {
+      * { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
     }
 
-    
     ::-webkit-scrollbar { width: 5px; height: 5px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: #16202C; border-radius: 4px; }
@@ -79,7 +80,6 @@ export function getWebHtml(): string {
       background: transparent;
     }
 
-    
     .sidebar {
       width: 250px;
       background-color: var(--bg-sidebar);
@@ -237,7 +237,6 @@ export function getWebHtml(): string {
       color: var(--text-primary);
     }
 
-    
     .main-workspace {
       flex: 1;
       display: flex;
@@ -336,6 +335,7 @@ export function getWebHtml(): string {
       display: flex;
       align-items: center;
       justify-content: center;
+      color: var(--blue-bright);
     }
     .model-text-wrap {
       display: flex;
@@ -411,7 +411,6 @@ export function getWebHtml(): string {
       box-shadow: 0 0 6px var(--success);
     }
 
-    
     .center-scroll-view {
       flex: 1;
       overflow-y: auto;
@@ -463,7 +462,6 @@ export function getWebHtml(): string {
       margin-bottom: 2.25rem;
     }
 
-    
     .feature-cards-grid {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
@@ -529,7 +527,6 @@ export function getWebHtml(): string {
       box-shadow: 0 0 8px var(--blue-primary);
     }
 
-    
     .quick-actions-row {
       display: flex;
       align-items: center;
@@ -559,7 +556,6 @@ export function getWebHtml(): string {
       color: #FFFFFF;
     }
 
-    
     .composer-wrapper {
       padding: 0 1.5rem 1.5rem 1.5rem;
       max-width: 900px;
@@ -606,18 +602,31 @@ export function getWebHtml(): string {
     .composer-tools-left {
       display: flex;
       align-items: center;
-      gap: 0.75rem;
-      color: var(--text-muted);
+      gap: 0.5rem;
     }
-    .tool-icon-btn {
-      cursor: pointer;
-      transition: color var(--transition-fast);
+
+    .tool-action-button {
+      width: 30px;
+      height: 30px;
+      border-radius: var(--radius-md);
       display: flex;
       align-items: center;
       justify-content: center;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all var(--transition-fast);
+      background: transparent;
+      border: 1px solid transparent;
     }
-    .tool-icon-btn:hover {
+    .tool-action-button:hover {
+      color: #FFFFFF;
+      background: var(--bg-elevated);
+      border-color: var(--border-subtle);
+    }
+    .tool-action-button.active {
       color: var(--blue-bright);
+      background: var(--blue-soft);
+      border-color: var(--border-blue);
     }
 
     .composer-tools-right {
@@ -666,7 +675,6 @@ export function getWebHtml(): string {
       transform: scale(0.96);
     }
 
-    
     .chat-messages-feed {
       display: none;
       flex-direction: column;
@@ -717,7 +725,6 @@ export function getWebHtml(): string {
       border: 1px solid var(--border-strong);
     }
 
-    
     .right-info-panel {
       width: 300px;
       background-color: var(--bg-sidebar);
@@ -772,7 +779,6 @@ export function getWebHtml(): string {
       gap: 1.5rem;
     }
 
-    
     .openkey-info-hero-card {
       background: var(--bg-surface);
       border: 1px solid var(--border-blue);
@@ -800,7 +806,6 @@ export function getWebHtml(): string {
       color: var(--text-muted);
     }
 
-    
     .metadata-rows-list {
       display: flex;
       flex-direction: column;
@@ -824,7 +829,6 @@ export function getWebHtml(): string {
       color: #FFFFFF;
     }
 
-    
     .recent-sessions-box {
       display: flex;
       flex-direction: column;
@@ -878,7 +882,6 @@ export function getWebHtml(): string {
       font-family: var(--font-mono);
     }
 
-    
     .tip-box-card {
       background: var(--bg-surface);
       border: 1px solid var(--border-subtle);
@@ -895,7 +898,6 @@ export function getWebHtml(): string {
       flex-shrink: 0;
     }
 
-    
     .standard-panel-view {
       display: none;
       flex: 1;
@@ -957,7 +959,6 @@ export function getWebHtml(): string {
       background: rgba(255, 255, 255, 0.02);
     }
 
-    
     .modal-backdrop {
       position: fixed;
       inset: 0;
@@ -1019,14 +1020,37 @@ export function getWebHtml(): string {
       overflow-y: auto;
       flex: 1;
     }
+
+    .form-group-field {
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+      margin-bottom: 0.9rem;
+    }
+    .form-group-field label {
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+    }
+    .form-control-input {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 0.6rem 0.85rem;
+      font-size: 0.84rem;
+      color: #FFFFFF;
+      outline: none;
+      transition: border-color var(--transition-fast);
+    }
+    .form-control-input:focus {
+      border-color: var(--border-blue);
+    }
   </style>
 </head>
 <body>
 
-  
   <aside class="sidebar">
     <div class="sidebar-brand-box">
-      
       <svg class="brand-key-icon" viewBox="0 0 36 36" fill="none">
         <circle cx="17" cy="15" r="9.5" stroke="#2F7CFF" stroke-width="3"/>
         <circle cx="17" cy="15" r="5" fill="#0B0F14" stroke="#2F7CFF" stroke-width="2"/>
@@ -1039,7 +1063,6 @@ export function getWebHtml(): string {
     </div>
 
     <div class="sidebar-content">
-      
       <div class="nav-list">
         <a class="nav-item active" id="nav-chat" onclick="navigateTo('chat')">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
@@ -1050,7 +1073,6 @@ export function getWebHtml(): string {
         </a>
       </div>
 
-      
       <div>
         <div class="nav-section-title">Workspace</div>
         <div class="nav-list">
@@ -1069,7 +1091,6 @@ export function getWebHtml(): string {
         </div>
       </div>
 
-      
       <div>
         <div class="nav-section-title">Manage</div>
         <div class="nav-list">
@@ -1088,7 +1109,6 @@ export function getWebHtml(): string {
         </div>
       </div>
 
-      
       <div>
         <div class="nav-section-title">Analytics</div>
         <div class="nav-list">
@@ -1099,7 +1119,6 @@ export function getWebHtml(): string {
         </div>
       </div>
 
-      
       <div>
         <div class="nav-section-title">System</div>
         <div class="nav-list">
@@ -1111,7 +1130,6 @@ export function getWebHtml(): string {
       </div>
     </div>
 
-    
     <div class="sidebar-footer">
       <div class="workspace-bottom-card" onclick="openWsModal()">
         <div class="ws-bottom-left">
@@ -1126,9 +1144,7 @@ export function getWebHtml(): string {
     </div>
   </aside>
 
-  
   <main class="main-workspace">
-    
     <header class="top-nav-bar">
       <div class="top-ws-pill" onclick="openWsModal()">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2F7CFF" stroke-width="2"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
@@ -1143,13 +1159,11 @@ export function getWebHtml(): string {
       </div>
     </header>
 
-    
     <div class="sub-header-bar">
       <div style="display:flex; align-items:center; gap:0.5rem;">
-        
         <div class="model-selector-btn" onclick="openModelPickerModal()">
           <div class="model-icon-img" id="subbarModelIcon">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="#2F7CFF"><path d="M12 2a10 10 0 1010 10A10 10 0 0012 2zm1 14.93V17a1 1 0 01-2 0v-.07A8 8 0 014.07 9H5a1 1 0 010-2h-.93A8 8 0 0111 4.07V5a1 1 0 012 0v-.93A8 8 0 0119.93 11H19a1 1 0 010 2h.93A8 8 0 0113 16.93z"/></svg>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 1010 10A10 10 0 0012 2zm1 14.93V17a1 1 0 01-2 0v-.07A8 8 0 014.07 9H5a1 1 0 010-2h-.93A8 8 0 0111 4.07V5a1 1 0 012 0v-.93A8 8 0 0119.93 11H19a1 1 0 010 2h.93A8 8 0 0113 16.93z"/></svg>
           </div>
           <div class="model-text-wrap">
             <span class="model-provider-title" id="subbarProviderName">DeepSeek</span>
@@ -1177,13 +1191,9 @@ export function getWebHtml(): string {
       </div>
     </div>
 
-    
     <div class="center-scroll-view" id="mainCenterView">
-      
       <div id="view-chat-container" style="display:flex; flex-direction:column; flex:1;">
-        
         <div class="welcome-container" id="welcomeScreenHero">
-          
           <svg class="welcome-hero-logo" viewBox="0 0 36 36" fill="none">
             <circle cx="17" cy="15" r="9.5" stroke="#2F7CFF" stroke-width="3"/>
             <circle cx="17" cy="15" r="5" fill="#0B0F14" stroke="#2F7CFF" stroke-width="2"/>
@@ -1192,7 +1202,6 @@ export function getWebHtml(): string {
           <h1 class="welcome-title">Welcome to <span>OpenKey</span></h1>
           <p class="welcome-subtitle">Manage your AI. Your way.</p>
 
-          
           <div class="feature-cards-grid">
             <div class="feature-card">
               <div class="feature-card-icon">
@@ -1224,40 +1233,41 @@ export function getWebHtml(): string {
             </div>
           </div>
 
-          
           <div class="center-quote-box">
             <span class="center-quote-text">“Better tools. Greater possibilities.”</span>
             <div class="center-quote-line"></div>
           </div>
 
-          
           <div class="quick-actions-row">
             <button class="quick-action-pill" onclick="sendPromptAction('Explain this project structure and purpose.')">
-              <span>⚝</span> Explain this project
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+              <span>Explain this project</span>
             </button>
             <button class="quick-action-pill" onclick="sendPromptAction('Review my code and identify potential improvements.')">
-              <span>✎</span> Review my code
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+              <span>Review my code</span>
             </button>
             <button class="quick-action-pill" onclick="sendPromptAction('Find and fix issues or bugs in this workspace.')">
-              <span>⌕</span> Find and fix issues
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <span>Find and fix issues</span>
             </button>
             <button class="quick-action-pill" onclick="openCompareModal()">
-              <span>◫</span> Compare models
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="12" y1="3" x2="12" y2="21"/></svg>
+              <span>Compare models</span>
             </button>
             <button class="quick-action-pill" onclick="sendPromptAction('Help me plan the next development phase.')">
-              <span>⏱</span> Help me plan
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              <span>Help me plan</span>
             </button>
             <button class="quick-action-pill" onclick="refreshCatalogData()" title="Reload catalog">
-              <span>↻</span>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>
             </button>
           </div>
         </div>
 
-        
         <div class="chat-messages-feed" id="chatFeedList"></div>
       </div>
 
-      
       <div id="view-overview" class="standard-panel-view">
         <div class="panel-header-row">
           <div>
@@ -1277,29 +1287,24 @@ export function getWebHtml(): string {
         </div>
       </div>
 
-      
       <div id="view-files" class="standard-panel-view">
         <div class="panel-header-row">
           <div>
             <h2 class="panel-headline">Workspace Files</h2>
             <p class="panel-tagline">Local files available to the agent for contextual inspection.</p>
           </div>
+          <button class="quick-action-pill" onclick="loadWorkspaceFilesTab()">Refresh Files</button>
         </div>
         <div class="clean-admin-table-wrap">
           <table class="admin-table">
             <thead>
-              <tr><th>Path</th><th>Type</th><th>Action</th></tr>
+              <tr><th>Path</th><th>Type</th><th>Size</th><th>Action</th></tr>
             </thead>
-            <tbody id="filesTableBody">
-              <tr><td>package.json</td><td>Config</td><td><button class="quick-action-pill" onclick="sendPromptAction('Read package.json')">Inspect</button></td></tr>
-              <tr><td>README.md</td><td>Documentation</td><td><button class="quick-action-pill" onclick="sendPromptAction('Read README.md')">Inspect</button></td></tr>
-              <tr><td>src/</td><td>Source Directory</td><td><button class="quick-action-pill" onclick="sendPromptAction('List files in src')">List</button></td></tr>
-            </tbody>
+            <tbody id="filesTableBody"></tbody>
           </table>
         </div>
       </div>
 
-      
       <div id="view-sessions" class="standard-panel-view">
         <div class="panel-header-row">
           <div>
@@ -1318,14 +1323,13 @@ export function getWebHtml(): string {
         </div>
       </div>
 
-      
       <div id="view-providers" class="standard-panel-view">
         <div class="panel-header-row">
           <div>
             <h2 class="panel-headline">Providers Catalog</h2>
-            <p class="panel-tagline">Multi-provider connections and discovery endpoints.</p>
+            <p class="panel-tagline">Multi-provider connections and custom AI endpoints.</p>
           </div>
-          <button class="quick-action-pill" onclick="loadProvidersList()">Refresh</button>
+          <button class="btn-new-chat" onclick="openAddProviderModal()">+ Add Custom Provider</button>
         </div>
         <div class="clean-admin-table-wrap">
           <table class="admin-table">
@@ -1337,7 +1341,6 @@ export function getWebHtml(): string {
         </div>
       </div>
 
-      
       <div id="view-models" class="standard-panel-view">
         <div class="panel-header-row">
           <div>
@@ -1355,7 +1358,6 @@ export function getWebHtml(): string {
         </div>
       </div>
 
-      
       <div id="view-keys" class="standard-panel-view">
         <div class="panel-header-row">
           <div>
@@ -1364,20 +1366,9 @@ export function getWebHtml(): string {
           </div>
         </div>
         <div style="background:var(--bg-surface); border:1px solid var(--border-subtle); border-radius:var(--radius-lg); padding:1.25rem; margin-bottom:1.5rem;">
-          <h3 style="font-size:0.9rem; font-weight:700; margin-bottom:0.75rem;">Add New Secret</h3>
+          <h3 style="font-size:0.9rem; font-weight:700; margin-bottom:0.75rem;">Add Encrypted Key</h3>
           <div style="display:grid; grid-template-columns: 1fr 2fr auto; gap:0.75rem;">
-            <select id="addKeyProviderSelect" style="background:var(--bg-elevated); border:1px solid var(--border-subtle); border-radius:var(--radius-md); padding:0.5rem; font-size:0.82rem; color:#fff;">
-              <option value="deepseek">DeepSeek</option>
-              <option value="openai">OpenAI</option>
-              <option value="anthropic">Anthropic</option>
-              <option value="gemini">Google Gemini</option>
-              <option value="groq">Groq</option>
-              <option value="xai">xAI (Grok)</option>
-              <option value="mistral">Mistral</option>
-              <option value="openrouter">OpenRouter</option>
-              <option value="together">Together AI</option>
-              <option value="ollama">Ollama (Local)</option>
-            </select>
+            <select id="addKeyProviderSelect" style="background:var(--bg-elevated); border:1px solid var(--border-subtle); border-radius:var(--radius-md); padding:0.5rem; font-size:0.82rem; color:#fff;"></select>
             <input type="password" id="addKeySecretInput" placeholder="sk-..." style="background:var(--bg-elevated); border:1px solid var(--border-subtle); border-radius:var(--radius-md); padding:0.5rem 0.75rem; font-size:0.82rem; color:#fff;">
             <button class="btn-new-chat" onclick="saveNewKey()">Save Secret</button>
           </div>
@@ -1392,7 +1383,6 @@ export function getWebHtml(): string {
         </div>
       </div>
 
-      
       <div id="view-usage" class="standard-panel-view">
         <div class="panel-header-row">
           <div>
@@ -1410,7 +1400,6 @@ export function getWebHtml(): string {
         </div>
       </div>
 
-      
       <div id="view-settings" class="standard-panel-view">
         <div class="panel-header-row">
           <div>
@@ -1426,9 +1415,9 @@ export function getWebHtml(): string {
       </div>
     </div>
 
-    
     <div class="composer-wrapper">
       <div class="composer-container">
+        <input type="file" id="composerFileInput" style="display:none;" onchange="handleFileAttach(event)">
         <textarea
           id="chatPromptInput"
           class="composer-textarea"
@@ -1437,14 +1426,22 @@ export function getWebHtml(): string {
         ></textarea>
         <div class="composer-controls">
           <div class="composer-tools-left">
-            <span class="tool-icon-btn" title="Attach file">📎</span>
-            <span class="tool-icon-btn" title="Web search">🌐</span>
-            <span class="tool-icon-btn" title="Code snippet">&lt;/&gt;</span>
-            <span class="tool-icon-btn" title="Files workspace">📁</span>
+            <button class="tool-action-button" title="Attach local file" onclick="triggerFileInput()">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/></svg>
+            </button>
+            <button class="tool-action-button" id="btnWebSearchToggle" title="Toggle web search" onclick="toggleWebSearch()">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
+            </button>
+            <button class="tool-action-button" title="Insert code block" onclick="insertCodeBlock()">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+            </button>
+            <button class="tool-action-button" title="Select workspace files" onclick="openWorkspaceFilesModal()">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
+            </button>
           </div>
           <div class="composer-tools-right">
             <div class="composer-model-pill" onclick="openModelPickerModal()">
-              <span id="composerModelIcon">🤖</span>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/></svg>
               <span id="composerModelTitle">DeepSeek · deepseek-chat</span>
               <span>▾</span>
             </div>
@@ -1457,7 +1454,6 @@ export function getWebHtml(): string {
     </div>
   </main>
 
-  
   <aside class="right-info-panel">
     <div class="right-panel-tabs">
       <div class="right-tab-item active" id="rightTabInfo" onclick="switchRightTab('info')">
@@ -1471,7 +1467,6 @@ export function getWebHtml(): string {
     </div>
 
     <div class="right-panel-body" id="rightInfoContent">
-      
       <div class="openkey-info-hero-card">
         <svg class="openkey-hero-img" viewBox="0 0 36 36" fill="none">
           <circle cx="17" cy="15" r="9.5" stroke="#2F7CFF" stroke-width="3"/>
@@ -1482,7 +1477,6 @@ export function getWebHtml(): string {
         <span class="openkey-card-subtitle">Your AI command center</span>
       </div>
 
-      
       <div class="metadata-rows-list">
         <div class="meta-row-item">
           <span class="meta-row-label">
@@ -1535,7 +1529,6 @@ export function getWebHtml(): string {
         </div>
       </div>
 
-      
       <div class="recent-sessions-box">
         <div class="recent-sessions-header">
           <span>Recent Sessions</span>
@@ -1544,9 +1537,10 @@ export function getWebHtml(): string {
         <div class="recent-sessions-items" id="recentSessionsSidebarList"></div>
       </div>
 
-      
       <div class="tip-box-card">
-        <span class="tip-box-icon">ⓘ</span>
+        <div class="tip-box-icon">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+        </div>
         <div>
           <strong style="color:#FFFFFF;">Tip:</strong> Use <span style="color:var(--blue-bright); font-family:var(--font-mono);">Ctrl K</span> to open the command palette.
         </div>
@@ -1554,8 +1548,54 @@ export function getWebHtml(): string {
     </div>
   </aside>
 
-  
-  
+  <div id="addProviderModal" class="modal-backdrop">
+    <div class="modal-window" style="max-width:540px;">
+      <div class="modal-head">
+        <span class="modal-title">Add Custom AI Provider</span>
+        <span class="modal-close" onclick="closeAllModals()">✕</span>
+      </div>
+      <div class="modal-content">
+        <div class="form-group-field">
+          <label>Provider ID</label>
+          <input type="text" id="customProvId" class="form-control-input" placeholder="e.g. vllm, local-ai, custom-proxy">
+        </div>
+        <div class="form-group-field">
+          <label>Display Name</label>
+          <input type="text" id="customProvName" class="form-control-input" placeholder="e.g. Local vLLM Server">
+        </div>
+        <div class="form-group-field">
+          <label>Base URL Endpoint</label>
+          <input type="text" id="customProvUrl" class="form-control-input" placeholder="e.g. http://localhost:8000/v1">
+        </div>
+        <div class="form-group-field">
+          <label>Models (comma separated)</label>
+          <input type="text" id="customProvModels" class="form-control-input" placeholder="e.g. llama-3-8b, mistral-7b, qwen-2.5">
+        </div>
+        <div class="form-group-field">
+          <label>API Key (optional)</label>
+          <input type="password" id="customProvApiKey" class="form-control-input" placeholder="sk-... / token">
+        </div>
+        <div style="display:flex; justify-content:flex-end; gap:0.5rem; margin-top:1rem;">
+          <button class="quick-action-pill" onclick="closeAllModals()">Cancel</button>
+          <button class="btn-new-chat" onclick="submitCustomProvider()">Add Provider</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="wsFilesModal" class="modal-backdrop">
+    <div class="modal-window" style="max-width:640px;">
+      <div class="modal-head">
+        <span class="modal-title">Workspace Files</span>
+        <span class="modal-close" onclick="closeAllModals()">✕</span>
+      </div>
+      <div class="modal-content">
+        <div style="font-size:0.8rem; color:var(--text-secondary); margin-bottom:0.75rem;">Click any file to attach its content to your prompt:</div>
+        <div id="wsFilesModalList" style="display:flex; flex-direction:column; gap:0.4rem; max-height:380px; overflow-y:auto;"></div>
+      </div>
+    </div>
+  </div>
+
   <div id="modelPickerModal" class="modal-backdrop">
     <div class="modal-window" style="max-width:540px;">
       <div class="modal-head">
@@ -1569,7 +1609,6 @@ export function getWebHtml(): string {
     </div>
   </div>
 
-  
   <div id="compareModal" class="modal-backdrop">
     <div class="modal-window" style="max-width:860px;">
       <div class="modal-head">
@@ -1579,7 +1618,7 @@ export function getWebHtml(): string {
       <div class="modal-content">
         <textarea id="comparePromptField" placeholder="Enter evaluation prompt..." style="width:100%; height:70px; background:var(--bg-elevated); border:1px solid var(--border-subtle); border-radius:var(--radius-md); padding:0.65rem; font-size:0.85rem; color:#fff; margin-bottom:0.75rem; resize:none;"></textarea>
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
-          <span style="font-size:0.78rem; color:var(--text-muted);">Evaluates DeepSeek, OpenAI, and Anthropic in parallel.</span>
+          <span style="font-size:0.78rem; color:var(--text-muted);">Evaluates models in parallel.</span>
           <button class="btn-new-chat" onclick="executeCompare()">Run Benchmark</button>
         </div>
         <div id="compareGridResult" style="display:grid; grid-template-columns:repeat(3, 1fr); gap:0.75rem;"></div>
@@ -1587,7 +1626,6 @@ export function getWebHtml(): string {
     </div>
   </div>
 
-  
   <div id="wsModal" class="modal-backdrop">
     <div class="modal-window" style="max-width:480px;">
       <div class="modal-head">
@@ -1598,7 +1636,6 @@ export function getWebHtml(): string {
     </div>
   </div>
 
-  
   <div id="cmdPaletteModal" class="modal-backdrop">
     <div class="modal-window" style="max-width:540px;">
       <input type="text" id="cmdInputBox" placeholder="Type a command or jump to section..." style="width:100%; background:transparent; border-bottom:1px solid var(--border-subtle); padding:1rem 1.25rem; font-size:1rem; color:#fff;" oninput="renderCmdList(this.value)">
@@ -1606,13 +1643,13 @@ export function getWebHtml(): string {
     </div>
   </div>
 
-  
   <script>
     let activeProvider = 'deepseek';
     let activeModel = 'deepseek-chat';
     let currentSessionId = null;
     let catalog = [];
     let cachedSessions = [];
+    let isWebSearchActive = false;
 
     window.addEventListener('keydown', (e) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
@@ -1641,6 +1678,7 @@ export function getWebHtml(): string {
       }
 
       if (tabId === 'overview') loadOverviewData();
+      if (tabId === 'files') loadWorkspaceFilesTab();
       if (tabId === 'sessions') loadSessionsList();
       if (tabId === 'providers') loadProvidersList();
       if (tabId === 'models') loadModelsList();
@@ -1656,14 +1694,21 @@ export function getWebHtml(): string {
         activeProvider = data.activeProviderId || 'deepseek';
         activeModel = data.activeModelId || 'deepseek-chat';
         updateHeaderAndMetadata();
+        populateKeyProviderDropdowns();
       } catch {}
+    }
+
+    function populateKeyProviderDropdowns() {
+      const select = document.getElementById('addKeyProviderSelect');
+      if (!select) return;
+      select.innerHTML = catalog.map(p => \`<option value="\${p.id}">\${p.name} (\${p.id})</option>\`).join('');
     }
 
     function updateHeaderAndMetadata() {
       document.getElementById('subbarProviderName').textContent = activeProvider.toUpperCase();
       document.getElementById('subbarModelId').textContent = activeModel + ' ▾';
       document.getElementById('composerModelTitle').textContent = activeProvider.toUpperCase() + ' · ' + activeModel;
-      document.getElementById('metaProviderVal').textContent = activeProvider.toUpperCase();
+      document.getElementById('metaProviderVal').textContent = activeModel;
       document.getElementById('metaModelVal').textContent = activeModel;
     }
 
@@ -1688,10 +1733,83 @@ export function getWebHtml(): string {
       }
     }
 
+    function triggerFileInput() {
+      document.getElementById('composerFileInput').click();
+    }
+
+    function handleFileAttach(e) {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const content = event.target?.result;
+        const textarea = document.getElementById('chatPromptInput');
+        textarea.value += \`\\n[Attached: \${file.name}]\\n\` + content + \`\\n\`;
+        textarea.focus();
+      };
+      reader.readAsText(file);
+    }
+
+    function toggleWebSearch() {
+      isWebSearchActive = !isWebSearchActive;
+      const btn = document.getElementById('btnWebSearchToggle');
+      if (isWebSearchActive) {
+        btn.classList.add('active');
+      } else {
+        btn.classList.remove('active');
+      }
+    }
+
+    function insertCodeBlock() {
+      const textarea = document.getElementById('chatPromptInput');
+      const start = textarea.selectionStart || 0;
+      const end = textarea.selectionEnd || 0;
+      const current = textarea.value;
+      const snippet = "\\n\`\`\`typescript\\n// code here\\n\`\`\`\\n";
+      textarea.value = current.substring(0, start) + snippet + current.substring(end);
+      textarea.focus();
+    }
+
+    async function openWorkspaceFilesModal() {
+      try {
+        const res = await fetch('/api/workspace/files');
+        const data = await res.json();
+        const list = document.getElementById('wsFilesModalList');
+        list.innerHTML = (data.files || []).map(f => \`
+          <div style="padding:0.55rem 0.85rem; background:var(--bg-elevated); border:1px solid var(--border-subtle); border-radius:var(--radius-md); display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="attachWorkspaceFile('\${f.path}')">
+            <div style="display:flex; align-items:center; gap:0.5rem;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+              <span style="font-family:var(--font-mono); font-size:0.82rem;">\${f.name}</span>
+            </div>
+            <span style="font-size:0.75rem; color:var(--blue-bright);">Attach</span>
+          </div>
+        \`).join('');
+        document.getElementById('wsFilesModal').classList.add('open');
+      } catch {}
+    }
+
+    async function attachWorkspaceFile(filePath) {
+      try {
+        const res = await fetch('/api/workspace/read-file', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ path: filePath })
+        });
+        const data = await res.json();
+        const textarea = document.getElementById('chatPromptInput');
+        textarea.value += \`\\n[File: \${filePath}]\\n\` + data.content + \`\\n\`;
+        closeAllModals();
+        textarea.focus();
+      } catch {}
+    }
+
     async function submitMessage() {
       const input = document.getElementById('chatPromptInput');
-      const text = input.value.trim();
+      let text = input.value.trim();
       if (!text) return;
+      if (isWebSearchActive && !text.includes('[Web Search]')) {
+        text = '[Web Search Active] ' + text;
+      }
       input.value = '';
 
       document.getElementById('welcomeScreenHero').style.display = 'none';
@@ -1839,18 +1957,85 @@ export function getWebHtml(): string {
       \`).join('');
     }
 
+    async function loadWorkspaceFilesTab() {
+      try {
+        const res = await fetch('/api/workspace/files');
+        const data = await res.json();
+        const tbody = document.getElementById('filesTableBody');
+        tbody.innerHTML = (data.files || []).map(f => \`
+          <tr>
+            <td class="mono"><strong>\${f.path}</strong></td>
+            <td>\${f.isDirectory ? 'Directory' : 'File'}</td>
+            <td class="mono">\${f.size ? f.size + ' B' : '—'}</td>
+            <td>
+              <button class="quick-action-pill" onclick="attachWorkspaceFile('\${f.path}')">Attach to Chat</button>
+            </td>
+          </tr>
+        \`).join('');
+      } catch {}
+    }
+
     async function loadProvidersList() {
       const res = await fetch('/api/providers');
       const data = await res.json();
+      catalog = data.providers || [];
+      populateKeyProviderDropdowns();
       const tbody = document.getElementById('providersTableBody');
-      tbody.innerHTML = (data.providers || []).map(p => \`
+      tbody.innerHTML = catalog.map(p => \`
         <tr>
-          <td><strong>\${p.name}</strong></td>
+          <td><strong>\${p.name}</strong> <span style="font-family:var(--font-mono); font-size:0.72rem; color:var(--text-muted);">(\${p.id})</span></td>
           <td class="mono">\${p.models?.length || 0} models</td>
           <td><span style="color:var(--success);">Connected</span></td>
-          <td><button class="quick-action-pill" onclick="navigateTo('keys')">Manage Key</button></td>
+          <td><button class="quick-action-pill" onclick="openAddKeyForProvider('\${p.id}')">Add Key</button></td>
         </tr>
       \`).join('');
+    }
+
+    function openAddProviderModal() {
+      document.getElementById('customProvId').value = '';
+      document.getElementById('customProvName').value = '';
+      document.getElementById('customProvUrl').value = '';
+      document.getElementById('customProvModels').value = '';
+      document.getElementById('customProvApiKey').value = '';
+      document.getElementById('addProviderModal').classList.add('open');
+    }
+
+    async function submitCustomProvider() {
+      const id = document.getElementById('customProvId').value.trim();
+      const name = document.getElementById('customProvName').value.trim();
+      const baseUrl = document.getElementById('customProvUrl').value.trim();
+      const modelsStr = document.getElementById('customProvModels').value.trim();
+      const apiKey = document.getElementById('customProvApiKey').value.trim();
+
+      if (!id || !name || !baseUrl) {
+        alert('Please fill ID, Name, and Base URL');
+        return;
+      }
+
+      const models = modelsStr ? modelsStr.split(',').map(m => m.trim()).filter(Boolean) : [];
+
+      const res = await fetch('/api/providers/custom', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, name, baseUrl, models, apiKey })
+      });
+      const data = await res.json();
+      if (data.success) {
+        closeAllModals();
+        await refreshCatalogData();
+        loadProvidersList();
+        loadKeysList();
+      } else {
+        alert('Error: ' + (data.error || 'Failed to add provider'));
+      }
+    }
+
+    function openAddKeyForProvider(providerId) {
+      navigateTo('keys');
+      const select = document.getElementById('addKeyProviderSelect');
+      if (select) {
+        select.value = providerId;
+      }
     }
 
     async function loadModelsList() {
@@ -2023,6 +2208,7 @@ export function getWebHtml(): string {
     const commandRegistry = [
       { label: 'New Chat Conversation', action: () => startNewConversation() },
       { label: 'Compare Models Benchmark', action: () => openCompareModal() },
+      { label: 'Add Custom Provider', action: () => openAddProviderModal() },
       { label: 'Manage API Keys Vault', action: () => navigateTo('keys') },
       { label: 'Providers & Endpoints', action: () => navigateTo('providers') },
       { label: 'Model Directory', action: () => navigateTo('models') },
