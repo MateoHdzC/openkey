@@ -51,7 +51,6 @@ export function getWebHtml(): string {
       --transition-normal: 220ms var(--ease);
     }
 
-    * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
       background-color: var(--bg-main);
@@ -64,10 +63,9 @@ export function getWebHtml(): string {
     }
 
     @media (prefers-reduced-motion: reduce) {
-      * { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
     }
 
-    /* Scrollbars */
+    
     ::-webkit-scrollbar { width: 5px; height: 5px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: #16202C; border-radius: 4px; }
@@ -81,9 +79,7 @@ export function getWebHtml(): string {
       background: transparent;
     }
 
-    /* ==========================================================================
-       SIDEBAR (Left, 250px)
-       ========================================================================== */
+    
     .sidebar {
       width: 250px;
       background-color: var(--bg-sidebar);
@@ -241,9 +237,7 @@ export function getWebHtml(): string {
       color: var(--text-primary);
     }
 
-    /* ==========================================================================
-       MAIN CENTER WORKSPACE (Layout & Topbar)
-       ========================================================================== */
+    
     .main-workspace {
       flex: 1;
       display: flex;
@@ -417,9 +411,7 @@ export function getWebHtml(): string {
       box-shadow: 0 0 6px var(--success);
     }
 
-    /* ==========================================================================
-       WELCOME / EMPTY STATE (Exact Match with Reference)
-       ========================================================================== */
+    
     .center-scroll-view {
       flex: 1;
       overflow-y: auto;
@@ -471,7 +463,7 @@ export function getWebHtml(): string {
       margin-bottom: 2.25rem;
     }
 
-    /* 4 Feature Cards Grid */
+    
     .feature-cards-grid {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
@@ -537,7 +529,7 @@ export function getWebHtml(): string {
       box-shadow: 0 0 8px var(--blue-primary);
     }
 
-    /* Quick Action Buttons Row */
+    
     .quick-actions-row {
       display: flex;
       align-items: center;
@@ -567,9 +559,7 @@ export function getWebHtml(): string {
       color: #FFFFFF;
     }
 
-    /* ==========================================================================
-       CHAT COMPOSER (Bottom)
-       ========================================================================== */
+    
     .composer-wrapper {
       padding: 0 1.5rem 1.5rem 1.5rem;
       max-width: 900px;
@@ -676,7 +666,7 @@ export function getWebHtml(): string {
       transform: scale(0.96);
     }
 
-    /* Active Chat Feed */
+    
     .chat-messages-feed {
       display: none;
       flex-direction: column;
@@ -727,9 +717,7 @@ export function getWebHtml(): string {
       border: 1px solid var(--border-strong);
     }
 
-    /* ==========================================================================
-       RIGHT INFORMATION PANEL (Exact Match with Reference, 300px)
-       ========================================================================== */
+    
     .right-info-panel {
       width: 300px;
       background-color: var(--bg-sidebar);
@@ -784,7 +772,7 @@ export function getWebHtml(): string {
       gap: 1.5rem;
     }
 
-    /* OpenKey Card */
+    
     .openkey-info-hero-card {
       background: var(--bg-surface);
       border: 1px solid var(--border-blue);
@@ -812,7 +800,7 @@ export function getWebHtml(): string {
       color: var(--text-muted);
     }
 
-    /* Structured Metadata List */
+    
     .metadata-rows-list {
       display: flex;
       flex-direction: column;
@@ -836,7 +824,7 @@ export function getWebHtml(): string {
       color: #FFFFFF;
     }
 
-    /* Recent Sessions */
+    
     .recent-sessions-box {
       display: flex;
       flex-direction: column;
@@ -890,7 +878,7 @@ export function getWebHtml(): string {
       font-family: var(--font-mono);
     }
 
-    /* Bottom Tip Box */
+    
     .tip-box-card {
       background: var(--bg-surface);
       border: 1px solid var(--border-subtle);
@@ -907,9 +895,7 @@ export function getWebHtml(): string {
       flex-shrink: 0;
     }
 
-    /* ==========================================================================
-       ENTERPRISE PANELS (Providers, API Keys, Models, Usage, Doctor, Settings)
-       ========================================================================== */
+    
     .standard-panel-view {
       display: none;
       flex: 1;
@@ -971,7 +957,7 @@ export function getWebHtml(): string {
       background: rgba(255, 255, 255, 0.02);
     }
 
-    /* Modals & Dropdown Overlays */
+    
     .modal-backdrop {
       position: fixed;
       inset: 0;
@@ -1037,12 +1023,10 @@ export function getWebHtml(): string {
 </head>
 <body>
 
-  <!-- ========================================================================
-       1. SIDEBAR NAVIGATION (Left, 250px)
-       ======================================================================== -->
+  
   <aside class="sidebar">
     <div class="sidebar-brand-box">
-      <!-- OpenKey Modern SVG Key Logo -->
+      
       <svg class="brand-key-icon" viewBox="0 0 36 36" fill="none">
         <circle cx="17" cy="15" r="9.5" stroke="#2F7CFF" stroke-width="3"/>
         <circle cx="17" cy="15" r="5" fill="#0B0F14" stroke="#2F7CFF" stroke-width="2"/>
@@ -1055,7 +1039,7 @@ export function getWebHtml(): string {
     </div>
 
     <div class="sidebar-content">
-      <!-- PRIMARY -->
+      
       <div class="nav-list">
         <a class="nav-item active" id="nav-chat" onclick="navigateTo('chat')">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
@@ -1066,7 +1050,7 @@ export function getWebHtml(): string {
         </a>
       </div>
 
-      <!-- WORKSPACE -->
+      
       <div>
         <div class="nav-section-title">Workspace</div>
         <div class="nav-list">
@@ -1085,7 +1069,7 @@ export function getWebHtml(): string {
         </div>
       </div>
 
-      <!-- MANAGE -->
+      
       <div>
         <div class="nav-section-title">Manage</div>
         <div class="nav-list">
@@ -1104,7 +1088,7 @@ export function getWebHtml(): string {
         </div>
       </div>
 
-      <!-- ANALYTICS -->
+      
       <div>
         <div class="nav-section-title">Analytics</div>
         <div class="nav-list">
@@ -1115,7 +1099,7 @@ export function getWebHtml(): string {
         </div>
       </div>
 
-      <!-- SYSTEM -->
+      
       <div>
         <div class="nav-section-title">System</div>
         <div class="nav-list">
@@ -1127,7 +1111,7 @@ export function getWebHtml(): string {
       </div>
     </div>
 
-    <!-- Bottom Workspace Switcher -->
+    
     <div class="sidebar-footer">
       <div class="workspace-bottom-card" onclick="openWsModal()">
         <div class="ws-bottom-left">
@@ -1142,11 +1126,9 @@ export function getWebHtml(): string {
     </div>
   </aside>
 
-  <!-- ========================================================================
-       2. MAIN WORKSPACE (Center)
-       ======================================================================== -->
+  
   <main class="main-workspace">
-    <!-- Top Nav Bar -->
+    
     <header class="top-nav-bar">
       <div class="top-ws-pill" onclick="openWsModal()">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2F7CFF" stroke-width="2"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
@@ -1161,10 +1143,10 @@ export function getWebHtml(): string {
       </div>
     </header>
 
-    <!-- Sub Header Bar -->
+    
     <div class="sub-header-bar">
       <div style="display:flex; align-items:center; gap:0.5rem;">
-        <!-- Model Selector Pill Button -->
+        
         <div class="model-selector-btn" onclick="openModelPickerModal()">
           <div class="model-icon-img" id="subbarModelIcon">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="#2F7CFF"><path d="M12 2a10 10 0 1010 10A10 10 0 0012 2zm1 14.93V17a1 1 0 01-2 0v-.07A8 8 0 014.07 9H5a1 1 0 010-2h-.93A8 8 0 0111 4.07V5a1 1 0 012 0v-.93A8 8 0 0119.93 11H19a1 1 0 010 2h.93A8 8 0 0113 16.93z"/></svg>
@@ -1195,13 +1177,13 @@ export function getWebHtml(): string {
       </div>
     </div>
 
-    <!-- Center Scroll Content Area -->
+    
     <div class="center-scroll-view" id="mainCenterView">
-      <!-- VIEW: CHAT & WELCOME -->
+      
       <div id="view-chat-container" style="display:flex; flex-direction:column; flex:1;">
-        <!-- Welcome Screen (Shown when no chat active) -->
+        
         <div class="welcome-container" id="welcomeScreenHero">
-          <!-- Hero Logo SVG -->
+          
           <svg class="welcome-hero-logo" viewBox="0 0 36 36" fill="none">
             <circle cx="17" cy="15" r="9.5" stroke="#2F7CFF" stroke-width="3"/>
             <circle cx="17" cy="15" r="5" fill="#0B0F14" stroke="#2F7CFF" stroke-width="2"/>
@@ -1210,7 +1192,7 @@ export function getWebHtml(): string {
           <h1 class="welcome-title">Welcome to <span>OpenKey</span></h1>
           <p class="welcome-subtitle">Manage your AI. Your way.</p>
 
-          <!-- 4 Feature Cards Grid -->
+          
           <div class="feature-cards-grid">
             <div class="feature-card">
               <div class="feature-card-icon">
@@ -1242,13 +1224,13 @@ export function getWebHtml(): string {
             </div>
           </div>
 
-          <!-- Quote Section -->
+          
           <div class="center-quote-box">
             <span class="center-quote-text">“Better tools. Greater possibilities.”</span>
             <div class="center-quote-line"></div>
           </div>
 
-          <!-- Quick Action Buttons Row -->
+          
           <div class="quick-actions-row">
             <button class="quick-action-pill" onclick="sendPromptAction('Explain this project structure and purpose.')">
               <span>⚝</span> Explain this project
@@ -1271,11 +1253,11 @@ export function getWebHtml(): string {
           </div>
         </div>
 
-        <!-- Active Chat Message Feed -->
+        
         <div class="chat-messages-feed" id="chatFeedList"></div>
       </div>
 
-      <!-- VIEW: OVERVIEW -->
+      
       <div id="view-overview" class="standard-panel-view">
         <div class="panel-header-row">
           <div>
@@ -1295,7 +1277,7 @@ export function getWebHtml(): string {
         </div>
       </div>
 
-      <!-- VIEW: FILES -->
+      
       <div id="view-files" class="standard-panel-view">
         <div class="panel-header-row">
           <div>
@@ -1317,7 +1299,7 @@ export function getWebHtml(): string {
         </div>
       </div>
 
-      <!-- VIEW: SESSIONS -->
+      
       <div id="view-sessions" class="standard-panel-view">
         <div class="panel-header-row">
           <div>
@@ -1336,7 +1318,7 @@ export function getWebHtml(): string {
         </div>
       </div>
 
-      <!-- VIEW: PROVIDERS -->
+      
       <div id="view-providers" class="standard-panel-view">
         <div class="panel-header-row">
           <div>
@@ -1355,7 +1337,7 @@ export function getWebHtml(): string {
         </div>
       </div>
 
-      <!-- VIEW: MODELS -->
+      
       <div id="view-models" class="standard-panel-view">
         <div class="panel-header-row">
           <div>
@@ -1373,7 +1355,7 @@ export function getWebHtml(): string {
         </div>
       </div>
 
-      <!-- VIEW: API KEYS -->
+      
       <div id="view-keys" class="standard-panel-view">
         <div class="panel-header-row">
           <div>
@@ -1410,7 +1392,7 @@ export function getWebHtml(): string {
         </div>
       </div>
 
-      <!-- VIEW: USAGE -->
+      
       <div id="view-usage" class="standard-panel-view">
         <div class="panel-header-row">
           <div>
@@ -1428,7 +1410,7 @@ export function getWebHtml(): string {
         </div>
       </div>
 
-      <!-- VIEW: SETTINGS -->
+      
       <div id="view-settings" class="standard-panel-view">
         <div class="panel-header-row">
           <div>
@@ -1444,7 +1426,7 @@ export function getWebHtml(): string {
       </div>
     </div>
 
-    <!-- Chat Composer -->
+    
     <div class="composer-wrapper">
       <div class="composer-container">
         <textarea
@@ -1475,9 +1457,7 @@ export function getWebHtml(): string {
     </div>
   </main>
 
-  <!-- ========================================================================
-       3. RIGHT INFORMATION PANEL (Exact Match with Reference, 300px)
-       ======================================================================== -->
+  
   <aside class="right-info-panel">
     <div class="right-panel-tabs">
       <div class="right-tab-item active" id="rightTabInfo" onclick="switchRightTab('info')">
@@ -1491,7 +1471,7 @@ export function getWebHtml(): string {
     </div>
 
     <div class="right-panel-body" id="rightInfoContent">
-      <!-- OpenKey Hero Card -->
+      
       <div class="openkey-info-hero-card">
         <svg class="openkey-hero-img" viewBox="0 0 36 36" fill="none">
           <circle cx="17" cy="15" r="9.5" stroke="#2F7CFF" stroke-width="3"/>
@@ -1502,7 +1482,7 @@ export function getWebHtml(): string {
         <span class="openkey-card-subtitle">Your AI command center</span>
       </div>
 
-      <!-- Structured Metadata List -->
+      
       <div class="metadata-rows-list">
         <div class="meta-row-item">
           <span class="meta-row-label">
@@ -1555,7 +1535,7 @@ export function getWebHtml(): string {
         </div>
       </div>
 
-      <!-- Recent Sessions -->
+      
       <div class="recent-sessions-box">
         <div class="recent-sessions-header">
           <span>Recent Sessions</span>
@@ -1564,7 +1544,7 @@ export function getWebHtml(): string {
         <div class="recent-sessions-items" id="recentSessionsSidebarList"></div>
       </div>
 
-      <!-- Tip Card -->
+      
       <div class="tip-box-card">
         <span class="tip-box-icon">ⓘ</span>
         <div>
@@ -1574,10 +1554,8 @@ export function getWebHtml(): string {
     </div>
   </aside>
 
-  <!-- ========================================================================
-       MODALS: Model Picker, Compare, Workspaces, Command Palette
-       ======================================================================== -->
-  <!-- Model Picker Modal -->
+  
+  
   <div id="modelPickerModal" class="modal-backdrop">
     <div class="modal-window" style="max-width:540px;">
       <div class="modal-head">
@@ -1591,7 +1569,7 @@ export function getWebHtml(): string {
     </div>
   </div>
 
-  <!-- Compare Models Modal -->
+  
   <div id="compareModal" class="modal-backdrop">
     <div class="modal-window" style="max-width:860px;">
       <div class="modal-head">
@@ -1609,7 +1587,7 @@ export function getWebHtml(): string {
     </div>
   </div>
 
-  <!-- Workspace Modal -->
+  
   <div id="wsModal" class="modal-backdrop">
     <div class="modal-window" style="max-width:480px;">
       <div class="modal-head">
@@ -1620,7 +1598,7 @@ export function getWebHtml(): string {
     </div>
   </div>
 
-  <!-- Command Palette Modal -->
+  
   <div id="cmdPaletteModal" class="modal-backdrop">
     <div class="modal-window" style="max-width:540px;">
       <input type="text" id="cmdInputBox" placeholder="Type a command or jump to section..." style="width:100%; background:transparent; border-bottom:1px solid var(--border-subtle); padding:1rem 1.25rem; font-size:1rem; color:#fff;" oninput="renderCmdList(this.value)">
@@ -1628,9 +1606,7 @@ export function getWebHtml(): string {
     </div>
   </div>
 
-  <!-- ========================================================================
-       4. CLIENT JAVASCRIPT & STATE MANAGEMENT
-       ======================================================================== -->
+  
   <script>
     let activeProvider = 'deepseek';
     let activeModel = 'deepseek-chat';
@@ -1638,7 +1614,6 @@ export function getWebHtml(): string {
     let catalog = [];
     let cachedSessions = [];
 
-    // Global Key Listener
     window.addEventListener('keydown', (e) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault();
@@ -1967,7 +1942,6 @@ export function getWebHtml(): string {
       document.getElementById('overviewProvidersCount').textContent = catalog.length + ' providers ready';
     }
 
-    // Modal helpers
     function openModelPickerModal() {
       renderModelPickerList('');
       document.getElementById('modelPickerModal').classList.add('open');

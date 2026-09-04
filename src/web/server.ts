@@ -23,7 +23,7 @@ export function createWebServer(): Hono {
     return c.html(getWebHtml());
   });
 
-  // Providers & Catalog
+  
   app.get('/api/providers', async (c) => {
     const active = configManager.getActiveModelSelection();
     const providers = registry.listProviders();
@@ -45,7 +45,7 @@ export function createWebServer(): Hono {
     });
   });
 
-  // Active Model Selection
+  
   app.post('/api/config/active', async (c) => {
     const body = await c.req.json<{ providerId: string; modelId: string }>();
     if (body.providerId && body.modelId) {
@@ -55,7 +55,7 @@ export function createWebServer(): Hono {
     return c.json({ success: false, error: 'Missing providerId or modelId' }, 400);
   });
 
-  // Accent Theme Configuration
+  
   app.post('/api/config/theme', async (c) => {
     const body = await c.req.json<{ accentColor: 'blue' | 'red' | 'orange' | 'white' | 'black' }>();
     if (body.accentColor) {
@@ -65,13 +65,13 @@ export function createWebServer(): Hono {
     return c.json({ success: false, error: 'Missing accentColor' }, 400);
   });
 
-  // Vault Keys List
+  
   app.get('/api/keys', (c) => {
     const keys = db.listSecretsMeta();
     return c.json(keys);
   });
 
-  // Save Key to Vault
+  
   app.post('/api/keys', async (c) => {
     const body = await c.req.json<{ providerId: string; name: string; apiKey: string }>();
     if (!body.providerId || !body.apiKey) {
@@ -83,14 +83,14 @@ export function createWebServer(): Hono {
     return c.json({ success: true, id: encrypted.id, maskedKey: encrypted.maskedKey });
   });
 
-  // Delete Key from Vault
+  
   app.delete('/api/keys/:id', (c) => {
     const id = c.req.param('id');
     db.deleteSecret(id);
     return c.json({ success: true });
   });
 
-  // Sessions API
+  
   app.get('/api/sessions', (c) => {
     const sessions = db.listSessions();
     return c.json(sessions);
@@ -151,7 +151,7 @@ export function createWebServer(): Hono {
     return c.json({ success: true });
   });
 
-  // Workspaces API
+  
   app.get('/api/workspaces', (c) => {
     const cwd = process.cwd();
     const workspaceName = path.basename(cwd);
@@ -170,7 +170,7 @@ export function createWebServer(): Hono {
     });
   });
 
-  // Compare Models API
+  
   app.post('/api/compare', async (c) => {
     const body = await c.req.json<{ prompt: string; models: Array<{ providerId: string; modelId: string }> }>();
     const prompt = body.prompt;
@@ -229,25 +229,25 @@ export function createWebServer(): Hono {
     return c.json({ prompt, results });
   });
 
-  // Data Export API
+  
   app.get('/api/data/export', (c) => {
     const exportData = db.getAllDataForExport();
     return c.json(exportData);
   });
 
-  // Usage Stats
+  
   app.get('/api/usage', (c) => {
     const summary = db.getUsageSummary();
     return c.json(summary);
   });
 
-  // Doctor Diagnostics
+  
   app.get('/api/doctor', async (c) => {
     const checks = await doctor.runAllChecks();
     return c.json(checks);
   });
 
-  // Streaming Chat & Agent execution (SSE)
+  
   app.post('/api/chat/stream', async (c) => {
     const body = await c.req.json<{ prompt: string; sessionId?: string; providerId?: string; modelId?: string }>();
     const prompt = body.prompt;

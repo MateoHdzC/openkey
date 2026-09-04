@@ -1,8 +1,4 @@
-/**
- * Centralized secret sanitization and log redaction layer.
- * Prevents any credential, Bearer token, or API key from leaking into
- * logs, exceptions, terminal outputs, or UI payloads.
- */
+
 
 const SENSITIVE_PATTERNS: RegExp[] = [
   /\bsk-[a-zA-Z0-9_-]{20,}\b/g,
@@ -17,10 +13,7 @@ const SENSITIVE_PATTERNS: RegExp[] = [
   /(["']?(?:api[_-]?key|secret|token|password|auth[_-]?token)["']?\s*[:=]\s*["'])([^"'\s]{8,})(["'])/gi,
 ];
 
-/**
- * Masks a sensitive key for display purposes only.
- * Example: "sk-proj-1234567890abcdef1234" -> "sk-proj-••••••••••••1234"
- */
+
 export function maskKey(key: string): string {
   if (!key || typeof key !== 'string') return '••••';
   const trimmed = key.trim();
@@ -39,10 +32,7 @@ export function maskKey(key: string): string {
   return `${prefix}••••••••••••••••${suffix}`;
 }
 
-/**
- * Sanitizes arbitrary text by replacing any detected API keys,
- * passwords, or bearer tokens with redacted placeholders.
- */
+
 export function sanitizeText(input: string): string {
   if (!input || typeof input !== 'string') return input;
   let sanitized = input;
@@ -66,9 +56,7 @@ export function sanitizeText(input: string): string {
   return sanitized;
 }
 
-/**
- * Recursively deep-sanitizes an object, error, or array, creating a safe clone.
- */
+
 export function sanitizeData<T>(data: T): T {
   if (data === null || data === undefined) return data;
   

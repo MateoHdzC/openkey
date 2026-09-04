@@ -19,7 +19,7 @@ describe('Secret Vault (AES-256-GCM)', () => {
     const vault = new SecretVault();
     const record = vault.encryptSecret('anthropic', 'work', 'sk-ant-test-key-999999999999999999');
 
-    // Tamper ciphertext
+    
     const tamperedRecord = { ...record, ciphertext: Buffer.from('corrupted').toString('base64') };
     expect(() => vault.decryptSecret(tamperedRecord)).toThrow();
   });

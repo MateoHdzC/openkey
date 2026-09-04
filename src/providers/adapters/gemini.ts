@@ -212,7 +212,6 @@ export class GeminiAdapter implements ProviderAdapter {
     const baseUrl = this.getBaseUrl(credentials);
     const { systemInstruction, contents } = this.formatContents(request.messages);
     const model = request.modelId.replace(/^models\//, '');
-
     const body: Record<string, unknown> = {
       contents,
       ...(systemInstruction ? { systemInstruction } : {}),

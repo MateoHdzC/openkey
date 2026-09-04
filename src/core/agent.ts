@@ -57,9 +57,7 @@ export class OpenKeyAgent {
     return `Current Workspace Root: ${this.workspaceRoot}`;
   }
 
-  /**
-   * Runs an interactive or multi-turn agent query with streaming feedback.
-   */
+  
   public async *run(
     prompt: string,
     history: ChatMessage[] = [],

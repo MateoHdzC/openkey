@@ -16,10 +16,7 @@ export class WorkspaceSandbox {
     this.workspaceRoot = path.resolve(newRoot);
   }
 
-  /**
-   * Resolves a target path and ensures it does not escape the workspace root
-   * unless explicitly permitted.
-   */
+  
   public resolveSafePath(targetPath: string, allowOutside: boolean = false): string {
     const resolved = path.isAbsolute(targetPath)
       ? path.resolve(targetPath)
@@ -37,10 +34,7 @@ export class WorkspaceSandbox {
     return resolved;
   }
 
-  /**
-   * Validates URLs against SSRF (Server-Side Request Forgery) attacks.
-   * Disallows local private subnets (169.254.169.254, AWS metadata, etc.) for external network requests.
-   */
+  
   public static validateExternalUrl(urlString: string): { valid: boolean; reason?: string } {
     try {
       const parsed = new URL(urlString);

@@ -128,7 +128,7 @@ export const ChatView: React.FC<ChatViewProps> = ({ onCommand, onRefreshStatus }
       <Text color="gray">{divider}</Text>
       <Box marginY={1} />
 
-      {/* Message Stream */}
+      {}
       <Box flexDirection="column" gap={1}>
         {messages.length === 0 && !isBusy && (
           <Box marginY={1}>
@@ -158,7 +158,7 @@ export const ChatView: React.FC<ChatViewProps> = ({ onCommand, onRefreshStatus }
           </Box>
         ))}
 
-        {/* Streaming & Tool Feedback */}
+        {}
         {isBusy && (
           <Box flexDirection="column" gap={1}>
             {streamedReasoning && (
@@ -192,7 +192,7 @@ export const ChatView: React.FC<ChatViewProps> = ({ onCommand, onRefreshStatus }
           </Box>
         )}
 
-        {/* Security Gate */}
+        {}
         {confirmPrompt && (
           <Box flexDirection="column" marginY={1}>
             <Text color="red" bold>
@@ -207,7 +207,7 @@ export const ChatView: React.FC<ChatViewProps> = ({ onCommand, onRefreshStatus }
       <Box marginY={1} />
       <Text color="gray">{divider}</Text>
 
-      {/* Input Line */}
+      {}
       <Box flexDirection="row" marginTop={1}>
         <Text color="white" bold>
           {'> '}

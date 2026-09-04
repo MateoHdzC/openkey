@@ -33,10 +33,7 @@ export class SecretVault {
     this.defaultMasterSecret = customKey || this.getMachineScopedSeed();
   }
 
-  /**
-   * Generates a stable machine/user-scoped seed for encryption at rest
-   * without needing the user to enter a master password every single invocation.
-   */
+  
   private getMachineScopedSeed(): string {
     const username = os.userInfo().username || 'openkey-user';
     const homedir = os.homedir();
@@ -44,17 +41,13 @@ export class SecretVault {
     return `openkey-vault-seed:${username}@${hostname}:${homedir}`;
   }
 
-  /**
-   * Derives a 32-byte (256-bit) encryption key using PBKDF2 with HMAC-SHA512.
-   */
+  
   private deriveKey(salt: Buffer, masterPassword?: string): Buffer {
     const password = masterPassword || this.defaultMasterSecret;
     return crypto.pbkdf2Sync(password, salt, 100_000, 32, 'sha512');
   }
 
-  /**
-   * Encrypts a raw secret using AES-256-GCM with authenticated tags.
-   */
+  
   public encryptSecret(
     providerId: string,
     name: string,
@@ -88,10 +81,7 @@ export class SecretVault {
     };
   }
 
-  /**
-   * Decrypts an EncryptedSecretRecord using AES-256-GCM.
-   * Throws if authentication tag or ciphertext is tampered with or master password is wrong.
-   */
+  
   public decryptSecret(
     record: EncryptedSecretRecord,
     masterPassword?: string

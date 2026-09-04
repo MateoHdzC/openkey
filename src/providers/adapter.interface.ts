@@ -1,8 +1,4 @@
-/**
- * Universal Provider, Model, and Tool interfaces for OpenKey.
- * Normalizes all differences between OpenAI, Anthropic, Gemini, DeepSeek,
- * OpenRouter, Groq, Ollama, and generic OpenAI-compatible APIs.
- */
+
 
 export interface ModelCapabilities {
   text: boolean;

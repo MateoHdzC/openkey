@@ -87,9 +87,7 @@ export class ProviderRegistry {
     return Array.from(this.adapters.values()).map((a) => a.meta);
   }
 
-  /**
-   * Retrieves active decrypted credentials for a given provider from the vault.
-   */
+  
   public async getCredentials(providerId: string, specificKeyId?: string): Promise<ProviderCredentials> {
     const adapter = this.getAdapter(providerId);
 
@@ -117,9 +115,7 @@ export class ProviderRegistry {
     };
   }
 
-  /**
-   * Discovers models for all configured providers or a specific provider.
-   */
+  
   public async discoverModels(providerId?: string): Promise<ModelInfo[]> {
     if (providerId) {
       const adapter = this.getAdapter(providerId);

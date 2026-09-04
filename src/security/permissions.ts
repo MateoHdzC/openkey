@@ -1,7 +1,4 @@
-/**
- * Security permissions engine.
- * Governs tool execution, dangerous command inspection, and interactive confirmation gates.
- */
+
 
 export type PermissionAction = 'allow' | 'ask' | 'deny';
 
@@ -88,9 +85,7 @@ export class PermissionFirewall {
     this.alwaysAllowedCommands.add(command.trim());
   }
 
-  /**
-   * Evaluates the risk level of a terminal command.
-   */
+  
   public evaluateCommandRisk(command: string): 'safe' | 'dangerous' | 'unknown' {
     const trimmed = command.trim();
 
@@ -114,9 +109,7 @@ export class PermissionFirewall {
     return 'unknown';
   }
 
-  /**
-   * Checks if an action should be allowed, asked, or denied according to policy.
-   */
+  
   public checkFilePermission(action: 'read' | 'write' | 'delete'): PermissionAction {
     return this.policy.files[action] || 'ask';
   }
