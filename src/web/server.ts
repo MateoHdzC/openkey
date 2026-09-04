@@ -339,22 +339,45 @@ export function startLocalWebServer(port: number = 3000, silent: boolean = false
     const app = createWebServer();
     const host = '127.0.0.1';
 
-    const server = serve(
-      {
-        fetch: app.fetch,
-        port,
-        hostname: host,
-      },
-      (info) => {
-        if (!silent) {
-          console.log(`\n🚀 OpenKey Web Studio listening on http://${host}:${info.port}\n`);
+    try {
+      const server = serve(
+        {
+          fetch: app.fetch,
+          port,
+          hostname: host,
+        },
+        (info) => {
+          if (!silent) {
+            console.log(`\n🚀 OpenKey Web Studio listening on http://${host}:${info.port}\n`);
+          }
+          resolve({
+            port: info.port,
+            host,
+            close: () => server.close(),
+          });
+        }
+      );
+
+      server.on('error', (err: NodeJS.ErrnoException) => {
+        if (err.code === 'EADDRINUSE') {
+          if (!silent) {
+            console.log(`\nℹ️  OpenKey Web Studio already running on http://${host}:${port}\n`);
+          }
+        } else if (!silent) {
+          console.error(`Web server error:`, err.message);
         }
         resolve({
-          port: info.port,
+          port,
           host,
-          close: () => server.close(),
+          close: () => {},
         });
-      }
-    );
+      });
+    } catch {
+      resolve({
+        port,
+        host,
+        close: () => {},
+      });
+    }
   });
 }
