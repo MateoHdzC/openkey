@@ -40,6 +40,18 @@ export function createCli(): Command {
     });
 
   program
+    .command('sessions')
+    .description('Manage and resume saved conversation sessions')
+    .action(async () => {
+      const config = new ConfigManager();
+      const port = config.getConfig().webPort || 3000;
+      try {
+        await startLocalWebServer(port, true);
+      } catch {}
+      render(React.createElement(App, { initialMode: 'chat', webUrl: `http://127.0.0.1:${port}` }));
+    });
+
+  program
     .command('models')
     .description('List configured and discovered AI models')
     .action(async () => {
