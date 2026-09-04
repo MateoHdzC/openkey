@@ -1,0 +1,51 @@
+{
+  "name": "openkey",
+  "version": "1.0.0",
+  "description": "Universal AI API Key Manager and Terminal Agent",
+  "main": "dist/bin/openkey.js",
+  "bin": {
+    "openkey": "dist/bin/openkey.js",
+    "OpenKey": "dist/bin/openkey.js"
+  },
+  "type": "module",
+  "scripts": {
+    "dev": "tsx bin/openkey.ts",
+    "build": "tsc",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "web": "tsx bin/openkey.ts web"
+  },
+  "keywords": [
+    "ai",
+    "cli",
+    "tui",
+    "agent",
+    "api-keys",
+    "openai",
+    "anthropic",
+    "gemini",
+    "deepseek",
+    "openrouter",
+    "ollama"
+  ],
+  "author": "OpenKey Contributors",
+  "license": "MIT",
+  "dependencies": {
+    "@hono/node-server": "^1.13.8",
+    "chalk": "^5.4.1",
+    "commander": "^13.1.0",
+    "hono": "^4.7.2",
+    "ink": "^5.1.0",
+    "ink-select-input": "^6.0.0",
+    "ink-spinner": "^5.0.0",
+    "ink-text-input": "^6.0.0",
+    "react": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.10",
+    "@types/react": "^18.3.18",
+    "tsx": "^4.19.3",
+    "typescript": "^5.8.2",
+    "vitest": "^3.0.8"
+  }
+}
