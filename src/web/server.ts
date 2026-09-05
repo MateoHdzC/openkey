@@ -8,6 +8,7 @@ import { ProviderRegistry } from '../providers/registry.js';
 import { SystemDoctor } from '../core/doctor.js';
 import { OpenKeyAgent } from '../core/agent.js';
 import { sanitizeData, sanitizeText } from '../core/sanitizer.js';
+import { UpdateManager } from '../core/updater.js';
 import path from 'node:path';
 
 export function createWebServer(): Hono {
@@ -418,6 +419,28 @@ export function createWebServer(): Hono {
         Connection: 'keep-alive',
       },
     });
+  });
+
+  const updater = new UpdateManager();
+
+  app.get('/api/update/check', async (c) => {
+    try {
+      const result = await updater.checkForUpdates();
+      return c.json({ success: true, ...result });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return c.json({ success: false, error: msg }, 500);
+    }
+  });
+
+  app.post('/api/update/apply', async (c) => {
+    try {
+      const result = await updater.applyUpdate();
+      return c.json(result);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return c.json({ success: false, error: msg }, 500);
+    }
   });
 
   return app;

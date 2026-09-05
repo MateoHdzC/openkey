@@ -140,9 +140,36 @@ openkey usage
 # Run system integrity and crypto diagnostics
 openkey doctor
 
+# Check for new updates on GitHub
+openkey update --check
+
+# Upgrade OpenKey to the latest version automatically
+openkey update
+
 # Start the Web Studio on a specific port
 openkey web --port 8080
 ```
+
+---
+
+## 🔄 Automatic Updates (`openkey update`)
+
+OpenKey includes a built-in update manager that keeps your local installation in sync with the GitHub repository.
+
+```bash
+# Check if a new commit or release is available
+openkey update --check
+
+# Download, rebuild, and re-link the latest version
+openkey update
+```
+
+### Update Workflow:
+1. **Repository Synchronization**: Queries `https://github.com/MateoHdzC/openkey` for new commits.
+2. **Automated Pull**: Runs `git pull origin main` to fetch the newest code.
+3. **Dependency Check**: Installs updated packages via `npm install`.
+4. **Clean Build**: Recompiles TypeScript source files with `npm run build`.
+5. **Global Linkage**: Automatically executes `npm link` so `openkey` is immediately updated across all terminal sessions.
 
 ---
 

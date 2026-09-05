@@ -1200,7 +1200,15 @@ export function getWebHtml(): string {
         <div class="panel-header-row">
           <div>
             <h2 class="panel-headline">Settings</h2>
-            <p class="panel-tagline">Local environment options and encrypted backup export.</p>
+            <p class="panel-tagline">Local environment options, updates, and encrypted backup export.</p>
+          </div>
+        </div>
+        <div style="background:var(--bg-surface); border:1px solid var(--border-subtle); border-radius:var(--radius-lg); padding:1.25rem; margin-bottom:1.5rem;">
+          <h3 style="font-size:0.9rem; font-weight:700; margin-bottom:0.4rem;">OpenKey Version & Updates</h3>
+          <p style="font-size:0.78rem; color:var(--text-secondary); margin-bottom:0.85rem;" id="updateStatusText">Check GitHub repository for new releases and updates.</p>
+          <div style="display:flex; gap:0.65rem; align-items:center;">
+            <button class="btn-new-chat" id="btnCheckUpdate" onclick="triggerUpdateCheck()">Check for Updates</button>
+            <button class="quick-action-pill" id="btnApplyUpdate" style="display:none;" onclick="triggerApplyUpdate()">Install Update</button>
           </div>
         </div>
         <div style="background:var(--bg-surface); border:1px solid var(--border-subtle); border-radius:var(--radius-lg); padding:1.25rem;">
@@ -1995,12 +2003,52 @@ export function getWebHtml(): string {
       { label: 'New Chat Conversation', action: () => startNewConversation() },
       { label: 'Compare Models Benchmark', action: () => openCompareModal() },
       { label: 'Add Custom Provider', action: () => openAddProviderModal() },
+      { label: 'Check for OpenKey Updates', action: () => { navigateTo('settings'); triggerUpdateCheck(); } },
       { label: 'Manage API Keys Vault', action: () => navigateTo('keys') },
       { label: 'Providers & Endpoints', action: () => navigateTo('providers') },
       { label: 'Model Directory', action: () => navigateTo('models') },
       { label: 'Usage & Cost Analytics', action: () => navigateTo('usage') },
       { label: 'Settings & Backups', action: () => navigateTo('settings') }
     ];
+
+    async function triggerUpdateCheck() {
+      const statusEl = document.getElementById('updateStatusText');
+      const btnApply = document.getElementById('btnApplyUpdate');
+      statusEl.textContent = 'Checking GitHub repository for latest commits...';
+      try {
+        const res = await fetch('/api/update/check');
+        const data = await res.json();
+        if (data.hasUpdate) {
+          statusEl.innerHTML = \`Update available: <strong>\${data.latestCommit}</strong> — <em>\${data.latestMessage}</em>\`;
+          btnApply.style.display = 'inline-block';
+        } else {
+          statusEl.textContent = \`OpenKey is up to date (commit \${data.currentCommit || 'latest'}).\`;
+          btnApply.style.display = 'none';
+        }
+      } catch {
+        statusEl.textContent = 'Failed to check repository updates.';
+      }
+    }
+
+    async function triggerApplyUpdate() {
+      const statusEl = document.getElementById('updateStatusText');
+      const btnApply = document.getElementById('btnApplyUpdate');
+      statusEl.textContent = 'Upgrading OpenKey and rebuilding... please wait...';
+      btnApply.style.display = 'none';
+      try {
+        const res = await fetch('/api/update/apply', { method: 'POST' });
+        const data = await res.json();
+        if (data.success) {
+          statusEl.textContent = \`Upgraded successfully to \${data.updatedCommit}! Restart OpenKey to load changes.\`;
+        } else {
+          statusEl.textContent = \`Update failed: \${data.error || 'Unknown error'}\`;
+          btnApply.style.display = 'inline-block';
+        }
+      } catch {
+        statusEl.textContent = 'Failed to apply update.';
+        btnApply.style.display = 'inline-block';
+      }
+    }
 
     function openCmdPalette() {
       document.getElementById('cmdPaletteModal').classList.add('open');

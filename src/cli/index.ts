@@ -8,6 +8,7 @@ import { ConfigManager } from '../core/config.js';
 import { ProviderRegistry } from '../providers/registry.js';
 import { SystemDoctor } from '../core/doctor.js';
 import { startLocalWebServer } from '../web/server.js';
+import { UpdateManager } from '../core/updater.js';
 
 export function createCli(): Command {
   const program = new Command();
@@ -137,6 +138,50 @@ export function createCli(): Command {
     .action(async (options) => {
       const port = parseInt(options.port, 10) || 3000;
       await startLocalWebServer(port);
+    });
+
+  program
+    .command('update')
+    .alias('upgrade')
+    .description('Check for updates and upgrade OpenKey to the latest version')
+    .option('-c, --check', 'Check for updates without installing')
+    .action(async (options) => {
+      console.log(chalk.cyan.bold('\n🔄 OpenKey Update Manager\n'));
+      const updater = new UpdateManager();
+
+      try {
+        console.log(chalk.gray('Checking remote repository status...'));
+        const check = await updater.checkForUpdates();
+
+        console.log(`Current version / commit: ${chalk.bold(check.currentCommit)}`);
+        console.log(`Latest on origin/main:     ${chalk.bold.green(check.latestCommit)}`);
+        console.log(`Latest commit message:     ${chalk.italic(check.latestMessage)}`);
+        console.log(`Repository:                ${chalk.blue(check.repoUrl)}\n`);
+
+        if (!check.hasUpdate) {
+          console.log(chalk.green('✓ OpenKey is already up to date!\n'));
+          return;
+        }
+
+        if (options.check) {
+          console.log(chalk.yellow('⚡ An update is available. Run `openkey update` to install.\n'));
+          return;
+        }
+
+        console.log(chalk.yellow('🚀 Applying latest updates...'));
+        const result = await updater.applyUpdate((step) => {
+          console.log(`  ${chalk.cyan('›')} ${step}`);
+        });
+
+        if (result.success) {
+          console.log(chalk.green.bold(`\n✓ OpenKey upgraded successfully to commit ${result.updatedCommit}!\n`));
+        } else {
+          console.log(chalk.red.bold(`\n✗ Update failed: ${result.error || 'Unknown error'}\n`));
+        }
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        console.log(chalk.red(`\n✗ Error communicating with repository: ${msg}\n`));
+      }
     });
 
   return program;
