@@ -392,25 +392,6 @@ export function getWebHtml(): string {
       box-shadow: 0 0 12px var(--blue-soft);
     }
 
-    .ws-context-badge {
-      display: flex;
-      align-items: center;
-      gap: 0.45rem;
-      background: var(--bg-surface);
-      border: 1px solid var(--border-subtle);
-      border-radius: var(--radius-full);
-      padding: 0.35rem 0.75rem;
-      font-size: 0.78rem;
-      color: var(--text-secondary);
-    }
-    .ws-context-dot {
-      width: 7px;
-      height: 7px;
-      border-radius: 50%;
-      background: var(--success);
-      box-shadow: 0 0 6px var(--success);
-    }
-
     .center-scroll-view {
       flex: 1;
       overflow-y: auto;
@@ -425,31 +406,19 @@ export function getWebHtml(): string {
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      padding: 2rem 1.5rem 1rem 1.5rem;
+      padding: 2rem 1.5rem;
       max-width: 900px;
       margin: 0 auto;
       width: 100%;
-    }
-
-    .welcome-hero-logo {
-      width: 76px;
-      height: 76px;
-      margin-bottom: 1.25rem;
-      filter: drop-shadow(0 0 24px rgba(47, 124, 255, 0.65));
-      animation: subtlePulse 4s ease-in-out infinite alternate;
-    }
-
-    @keyframes subtlePulse {
-      0% { transform: scale(0.98); filter: drop-shadow(0 0 16px rgba(47, 124, 255, 0.4)); }
-      100% { transform: scale(1.02); filter: drop-shadow(0 0 28px rgba(47, 124, 255, 0.75)); }
+      text-align: center;
     }
 
     .welcome-title {
-      font-size: 2rem;
+      font-size: 2.25rem;
       font-weight: 800;
       letter-spacing: -0.03em;
       color: #FFFFFF;
-      margin-bottom: 0.35rem;
+      margin-bottom: 0.5rem;
     }
     .welcome-title span {
       color: var(--blue-primary);
@@ -457,84 +426,9 @@ export function getWebHtml(): string {
     }
 
     .welcome-subtitle {
-      font-size: 0.95rem;
+      font-size: 1rem;
       color: var(--text-secondary);
-      margin-bottom: 2.25rem;
-    }
-
-    .feature-cards-grid {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 0.85rem;
-      width: 100%;
-      margin-bottom: 2.5rem;
-    }
-
-    .feature-card {
-      background: var(--bg-surface);
-      border: 1px solid var(--border-subtle);
-      border-radius: var(--radius-lg);
-      padding: 1.25rem 1rem;
-      display: flex;
-      flex-direction: column;
-      gap: 0.65rem;
-      transition: all var(--transition-fast);
-      cursor: default;
-    }
-    .feature-card:hover {
-      border-color: var(--border-blue);
-      background: var(--bg-hover);
-      transform: translateY(-2px);
-    }
-    .feature-card-icon {
-      width: 32px;
-      height: 32px;
-      background: var(--blue-soft);
-      border: 1px solid var(--border-blue);
-      border-radius: var(--radius-md);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: var(--blue-bright);
-    }
-    .feature-card-title {
-      font-size: 0.88rem;
-      font-weight: 700;
-      color: #FFFFFF;
-    }
-    .feature-card-desc {
-      font-size: 0.76rem;
-      color: var(--text-muted);
-      line-height: 1.35;
-    }
-
-    .center-quote-box {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 0.65rem;
-      margin-bottom: 1.5rem;
-    }
-    .center-quote-text {
-      font-size: 0.86rem;
-      font-style: italic;
-      color: var(--text-muted);
-    }
-    .center-quote-line {
-      width: 70px;
-      height: 2px;
-      background: linear-gradient(90deg, transparent, var(--blue-primary), transparent);
-      box-shadow: 0 0 8px var(--blue-primary);
-    }
-
-    .quick-actions-row {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-wrap: wrap;
-      gap: 0.5rem;
-      margin-bottom: 1.5rem;
-      width: 100%;
+      margin-bottom: 0;
     }
 
     .quick-action-pill {
@@ -777,33 +671,6 @@ export function getWebHtml(): string {
       display: flex;
       flex-direction: column;
       gap: 1.5rem;
-    }
-
-    .openkey-info-hero-card {
-      background: var(--bg-surface);
-      border: 1px solid var(--border-blue);
-      border-radius: var(--radius-lg);
-      padding: 1.25rem;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      text-align: center;
-      box-shadow: 0 0 20px var(--blue-soft);
-    }
-    .openkey-hero-img {
-      width: 48px;
-      height: 48px;
-      margin-bottom: 0.65rem;
-      filter: drop-shadow(0 0 12px rgba(47, 124, 255, 0.6));
-    }
-    .openkey-card-name {
-      font-size: 0.95rem;
-      font-weight: 700;
-      color: #FFFFFF;
-    }
-    .openkey-card-subtitle {
-      font-size: 0.75rem;
-      color: var(--text-muted);
     }
 
     .metadata-rows-list {
@@ -1183,10 +1050,6 @@ export function getWebHtml(): string {
       </div>
 
       <div style="display:flex; align-items:center; gap:0.5rem;">
-        <div class="ws-context-badge">
-          <span class="ws-context-dot"></span>
-          <span>Workspace Context</span>
-        </div>
         <button class="btn-icon-square" onclick="openCmdPalette()">•••</button>
       </div>
     </div>
@@ -1194,75 +1057,8 @@ export function getWebHtml(): string {
     <div class="center-scroll-view" id="mainCenterView">
       <div id="view-chat-container" style="display:flex; flex-direction:column; flex:1;">
         <div class="welcome-container" id="welcomeScreenHero">
-          <svg class="welcome-hero-logo" viewBox="0 0 36 36" fill="none">
-            <circle cx="17" cy="15" r="9.5" stroke="#2F7CFF" stroke-width="3"/>
-            <circle cx="17" cy="15" r="5" fill="#0B0F14" stroke="#2F7CFF" stroke-width="2"/>
-            <path d="M17 24.5V32M17 28H22M17 32H22" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
           <h1 class="welcome-title">Welcome to <span>OpenKey</span></h1>
           <p class="welcome-subtitle">Manage your AI. Your way.</p>
-
-          <div class="feature-cards-grid">
-            <div class="feature-card">
-              <div class="feature-card-icon">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
-              </div>
-              <div class="feature-card-title">Multi-Provider</div>
-              <div class="feature-card-desc">Use the models you prefer</div>
-            </div>
-            <div class="feature-card">
-              <div class="feature-card-icon">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2l-2 2m-1.5 1.5L14 9l-1.5-1.5L11 9l-1-1-3 3 1.5 1.5-4 4A2 2 0 006 19l4-4 1.5 1.5 3-3-1-1 1.5-1.5L18 8.5l1.5-1.5 2-2z"/></svg>
-              </div>
-              <div class="feature-card-title">Your Keys</div>
-              <div class="feature-card-desc">Secure and encrypted</div>
-            </div>
-            <div class="feature-card">
-              <div class="feature-card-icon">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>
-              </div>
-              <div class="feature-card-title">Powerful Tools</div>
-              <div class="feature-card-desc">Work with real context</div>
-            </div>
-            <div class="feature-card">
-              <div class="feature-card-icon">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
-              </div>
-              <div class="feature-card-title">Built for Developers</div>
-              <div class="feature-card-desc">Flexible, fast, open</div>
-            </div>
-          </div>
-
-          <div class="center-quote-box">
-            <span class="center-quote-text">“Better tools. Greater possibilities.”</span>
-            <div class="center-quote-line"></div>
-          </div>
-
-          <div class="quick-actions-row">
-            <button class="quick-action-pill" onclick="sendPromptAction('Explain this project structure and purpose.')">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-              <span>Explain this project</span>
-            </button>
-            <button class="quick-action-pill" onclick="sendPromptAction('Review my code and identify potential improvements.')">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-              <span>Review my code</span>
-            </button>
-            <button class="quick-action-pill" onclick="sendPromptAction('Find and fix issues or bugs in this workspace.')">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-              <span>Find and fix issues</span>
-            </button>
-            <button class="quick-action-pill" onclick="openCompareModal()">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="12" y1="3" x2="12" y2="21"/></svg>
-              <span>Compare models</span>
-            </button>
-            <button class="quick-action-pill" onclick="sendPromptAction('Help me plan the next development phase.')">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-              <span>Help me plan</span>
-            </button>
-            <button class="quick-action-pill" onclick="refreshCatalogData()" title="Reload catalog">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>
-            </button>
-          </div>
         </div>
 
         <div class="chat-messages-feed" id="chatFeedList"></div>
@@ -1467,16 +1263,6 @@ export function getWebHtml(): string {
     </div>
 
     <div class="right-panel-body" id="rightInfoContent">
-      <div class="openkey-info-hero-card">
-        <svg class="openkey-hero-img" viewBox="0 0 36 36" fill="none">
-          <circle cx="17" cy="15" r="9.5" stroke="#2F7CFF" stroke-width="3"/>
-          <circle cx="17" cy="15" r="5" fill="#0B0F14" stroke="#2F7CFF" stroke-width="2"/>
-          <path d="M17 24.5V32M17 28H22M17 32H22" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-        <span class="openkey-card-name">OpenKey</span>
-        <span class="openkey-card-subtitle">Your AI command center</span>
-      </div>
-
       <div class="metadata-rows-list">
         <div class="meta-row-item">
           <span class="meta-row-label">
