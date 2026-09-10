@@ -242,96 +242,481 @@ export function createWebServer(): Hono {
   });
 
   
+  app.get('/v1/models', async (c) => {
+    try {
+      const presets = db.listPresets();
+      const providers = registry.listProviders();
+      const modelData = [];
+
+      for (const pr of presets) {
+        modelData.push({
+          id: pr.alias,
+          object: 'model',
+          created: Math.floor(Date.now() / 1000),
+          owned_by: `preset (${pr.providerId}/${pr.modelId})`,
+          permission: [],
+          root: pr.modelId,
+          parent: pr.providerId,
+        });
+      }
+
+      for (const p of providers) {
+        for (const m of p.defaultModels) {
+          modelData.push({
+            id: m.id,
+            object: 'model',
+            created: Math.floor(Date.now() / 1000),
+            owned_by: p.id,
+            permission: [],
+            root: m.id,
+            parent: p.id,
+          });
+          modelData.push({
+            id: `${p.id}/${m.id}`,
+            object: 'model',
+            created: Math.floor(Date.now() / 1000),
+            owned_by: p.id,
+            permission: [],
+            root: m.id,
+            parent: p.id,
+          });
+        }
+      }
+
+      return c.json({
+        object: 'list',
+        data: modelData,
+      });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return c.json({ error: { message: msg, type: 'invalid_request_error' } }, 500);
+    }
+  });
+
+  app.post('/v1/chat/completions', async (c) => {
+    const start = Date.now();
+    try {
+      const body = await c.req.json<{
+        model?: string;
+        messages: Array<{ role: 'system' | 'user' | 'assistant' | 'tool'; content: string }>;
+        stream?: boolean;
+        temperature?: number;
+        max_tokens?: number;
+      }>();
+
+      if (!body.messages || !Array.isArray(body.messages) || body.messages.length === 0) {
+        return c.json({ error: { message: 'messages is required and must be a non-empty array', type: 'invalid_request_error' } }, 400);
+      }
+
+      const requestedModel = body.model || 'coding';
+      const resolved = registry.resolvePresetOrModel(requestedModel);
+      const adapter = registry.getAdapter(resolved.providerId);
+      const creds = await registry.getCredentials(resolved.providerId);
+
+      if (body.stream) {
+        const stream = new ReadableStream({
+          async start(controller) {
+            const encoder = new TextEncoder();
+            const chunkId = `chatcmpl-${Date.now()}`;
+            const created = Math.floor(Date.now() / 1000);
+
+            try {
+              for await (const chunk of adapter.chatStream(
+                {
+                  modelId: resolved.modelId,
+                  messages: body.messages,
+                  temperature: body.temperature,
+                  maxTokens: body.max_tokens,
+                },
+                creds
+              )) {
+                if (chunk.content) {
+                  const dataPayload = {
+                    id: chunkId,
+                    object: 'chat.completion.chunk',
+                    created,
+                    model: requestedModel,
+                    choices: [
+                      {
+                        index: 0,
+                        delta: { content: chunk.content },
+                        finish_reason: null,
+                      },
+                    ],
+                  };
+                  controller.enqueue(encoder.encode(`data: ${JSON.stringify(dataPayload)}\n\n`));
+                }
+              }
+
+              const donePayload = {
+                id: chunkId,
+                object: 'chat.completion.chunk',
+                created,
+                model: requestedModel,
+                choices: [
+                  {
+                    index: 0,
+                    delta: {},
+                    finish_reason: 'stop',
+                  },
+                ],
+              };
+              controller.enqueue(encoder.encode(`data: ${JSON.stringify(donePayload)}\n\n`));
+              controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+
+              const durationMs = Date.now() - start;
+              db.logUsage({
+                timestamp: new Date().toISOString(),
+                providerId: resolved.providerId,
+                modelId: resolved.modelId,
+                durationMs,
+                inputTokens: 0,
+                outputTokens: 0,
+                totalTokens: 0,
+                status: 'success',
+              });
+            } catch (err: unknown) {
+              const msg = err instanceof Error ? err.message : String(err);
+              const errPayload = {
+                error: {
+                  message: `[Zero Silent Fallback] Provider ${resolved.providerId} failed: ${msg}`,
+                  type: 'upstream_error',
+                  providerId: resolved.providerId,
+                  modelId: resolved.modelId,
+                  retryable: true,
+                },
+              };
+              controller.enqueue(encoder.encode(`data: ${JSON.stringify(errPayload)}\n\n`));
+            } finally {
+              controller.close();
+            }
+          },
+        });
+
+        return new Response(stream, {
+          headers: {
+            'Content-Type': 'text/event-stream',
+            'Cache-Control': 'no-cache',
+            Connection: 'keep-alive',
+          },
+        });
+      }
+
+      const response = await adapter.chat(
+        {
+          modelId: resolved.modelId,
+          messages: body.messages,
+          temperature: body.temperature,
+          maxTokens: body.max_tokens,
+        },
+        creds
+      );
+
+      const durationMs = Date.now() - start;
+      const totalTokens = response.usage?.totalTokens || 0;
+      const inputTokens = response.usage?.inputTokens || 0;
+      const outputTokens = response.usage?.outputTokens || 0;
+
+      db.logUsage({
+        timestamp: new Date().toISOString(),
+        providerId: resolved.providerId,
+        modelId: resolved.modelId,
+        durationMs,
+        inputTokens,
+        outputTokens,
+        totalTokens,
+        status: 'success',
+      });
+
+      return c.json({
+        id: `chatcmpl-${Date.now()}`,
+        object: 'chat.completion',
+        created: Math.floor(Date.now() / 1000),
+        model: requestedModel,
+        resolvedModel: {
+          providerId: resolved.providerId,
+          modelId: resolved.modelId,
+          presetAlias: resolved.presetAlias,
+        },
+        choices: [
+          {
+            index: 0,
+            message: {
+              role: 'assistant',
+              content: response.message.content,
+            },
+            finish_reason: response.finishReason || 'stop',
+          },
+        ],
+        usage: {
+          prompt_tokens: inputTokens,
+          completion_tokens: outputTokens,
+          total_tokens: totalTokens,
+        },
+      });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return c.json(
+        {
+          error: {
+            message: `[Zero Silent Fallback] ${msg}`,
+            type: 'upstream_error',
+            retryable: true,
+          },
+        },
+        500
+      );
+    }
+  });
+
+  app.get('/api/profiles', (c) => {
+    const profiles = db.listProfiles();
+    return c.json(profiles);
+  });
+
+  app.post('/api/profiles', async (c) => {
+    const body = await c.req.json<{
+      providerId: string;
+      name: string;
+      baseUrl?: string;
+      authType?: 'bearer' | 'api-key';
+      customHeaders?: Record<string, string>;
+      models?: string[];
+      apiKey?: string;
+    }>();
+
+    if (!body.providerId || !body.name) {
+      return c.json({ success: false, error: 'providerId and name are required' }, 400);
+    }
+
+    const now = new Date().toISOString();
+    let keyId: string | undefined;
+
+    if (body.apiKey && body.apiKey.trim()) {
+      const encrypted = vault.encryptSecret(body.providerId, `${body.name} Key`, body.apiKey.trim());
+      db.saveSecret(encrypted);
+      keyId = encrypted.id;
+    }
+
+    const profile = {
+      id: `prof_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      providerId: body.providerId,
+      name: body.name.trim(),
+      baseUrl: body.baseUrl ? body.baseUrl.trim() : undefined,
+      authType: body.authType || 'bearer',
+      customHeaders: body.customHeaders,
+      models: body.models && body.models.length > 0 ? body.models : [],
+      keyId,
+      isActive: true,
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    db.saveProfile(profile);
+    db.setActiveProfile(profile.id, body.providerId);
+
+    return c.json({ success: true, profile });
+  });
+
+  app.post('/api/profiles/:id/activate', (c) => {
+    const id = c.req.param('id');
+    const profile = db.getProfile(id);
+    if (!profile) {
+      return c.json({ success: false, error: 'Profile not found' }, 404);
+    }
+    db.setActiveProfile(id, profile.providerId);
+    return c.json({ success: true });
+  });
+
+  app.delete('/api/profiles/:id', (c) => {
+    const id = c.req.param('id');
+    db.deleteProfile(id);
+    return c.json({ success: true });
+  });
+
+  app.get('/api/presets', (c) => {
+    const presets = db.listPresets();
+    return c.json(presets);
+  });
+
+  app.post('/api/presets', async (c) => {
+    const body = await c.req.json<{
+      alias: string;
+      name: string;
+      providerId: string;
+      modelId: string;
+      description?: string;
+    }>();
+
+    if (!body.alias || !body.providerId || !body.modelId) {
+      return c.json({ success: false, error: 'alias, providerId, and modelId are required' }, 400);
+    }
+
+    const existing = db.getPresetByAlias(body.alias);
+    const preset = {
+      id: existing ? existing.id : `preset_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      alias: body.alias.trim().toLowerCase(),
+      name: body.name || body.alias,
+      providerId: body.providerId,
+      modelId: body.modelId,
+      description: body.description || '',
+      updatedAt: new Date().toISOString(),
+    };
+
+    db.savePreset(preset);
+    return c.json({ success: true, preset });
+  });
+
   app.get('/api/workspaces', (c) => {
+    const workspaces = db.listWorkspaces();
+    const active = db.getActiveWorkspace();
     const cwd = process.cwd();
-    const workspaceName = path.basename(cwd);
-    return c.json({
-      currentWorkspace: {
+
+    if (workspaces.length === 0) {
+      const defaultWs = {
         id: 'ws_default',
-        name: workspaceName,
+        name: path.basename(cwd) || 'Workspace',
         path: cwd,
-        active: true,
-      },
-      workspaces: [
-        { id: 'ws_default', name: workspaceName, path: cwd, active: true },
-        { id: 'ws_docs', name: 'Documentation & Guides', path: path.join(cwd, 'docs'), active: false },
-        { id: 'ws_experiments', name: 'AI Experiments', path: path.join(cwd, 'experiments'), active: false },
-      ],
+        defaultProviderId: 'openai',
+        defaultModelId: 'gpt-4o',
+        contextPaths: [],
+        isActive: true,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      db.saveWorkspace(defaultWs);
+      return c.json({ currentWorkspace: defaultWs, workspaces: [defaultWs] });
+    }
+
+    return c.json({
+      currentWorkspace: active || workspaces[0],
+      workspaces,
     });
   });
 
-  
-  app.post('/api/compare', async (c) => {
-    const body = await c.req.json<{ prompt: string; models: Array<{ providerId: string; modelId: string }> }>();
-    const prompt = body.prompt;
-    const selectedModels = body.models || [];
+  app.post('/api/workspaces', async (c) => {
+    const body = await c.req.json<{
+      name: string;
+      path?: string;
+      defaultProviderId?: string;
+      defaultModelId?: string;
+      systemInstructions?: string;
+      contextPaths?: string[];
+    }>();
 
-    if (!prompt || selectedModels.length === 0) {
-      return c.json({ error: 'Prompt and at least one model are required' }, 400);
+    if (!body.name) {
+      return c.json({ success: false, error: 'Workspace name is required' }, 400);
     }
 
-    const results = await Promise.all(
-      selectedModels.map(async (target) => {
-        const start = Date.now();
-        const adapter = registry.getAdapter(target.providerId);
-        try {
-          const creds = await registry.getCredentials(target.providerId);
-          const response = await adapter.chat(
-            {
-              modelId: target.modelId,
-              messages: [{ role: 'user', content: prompt }],
-            },
-            creds
-          );
-          const rawContent = typeof response.message.content === 'string'
-            ? response.message.content
-            : JSON.stringify(response.message.content);
-          const durationSec = (Date.now() - start) / 1000;
-          const tokens = response.usage?.totalTokens || Math.round(prompt.length / 4 + rawContent.length / 4);
-          const cost = tokens * 0.000005;
+    const activeSel = configManager.getActiveModelSelection();
+    const now = new Date().toISOString();
+    const ws = {
+      id: `ws_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      name: body.name.trim(),
+      path: body.path || process.cwd(),
+      defaultProviderId: body.defaultProviderId || activeSel.providerId,
+      defaultModelId: body.defaultModelId || activeSel.modelId,
+      systemInstructions: body.systemInstructions,
+      contextPaths: body.contextPaths || [],
+      isActive: true,
+      createdAt: now,
+      updatedAt: now,
+    };
 
-          return {
-            providerId: target.providerId,
-            modelId: target.modelId,
-            content: sanitizeText(rawContent),
-            durationSec: parseFloat(durationSec.toFixed(2)),
-            tokens,
-            costUSD: parseFloat(cost.toFixed(4)),
-            status: 'success',
-          };
-        } catch (err: unknown) {
-          const durationSec = (Date.now() - start) / 1000;
-          const msg = err instanceof Error ? err.message : String(err);
-          return {
-            providerId: target.providerId,
-            modelId: target.modelId,
-            content: '',
-            error: sanitizeText(msg),
-            durationSec: parseFloat(durationSec.toFixed(2)),
-            tokens: 0,
-            costUSD: 0,
-            status: 'error',
-          };
-        }
-      })
-    );
-
-    return c.json({ prompt, results });
+    db.saveWorkspace(ws);
+    db.setActiveWorkspace(ws.id);
+    return c.json({ success: true, workspace: ws });
   });
 
-  
+  app.post('/api/workspaces/:id/activate', (c) => {
+    const id = c.req.param('id');
+    db.setActiveWorkspace(id);
+    return c.json({ success: true });
+  });
+
+  app.delete('/api/workspaces/:id', (c) => {
+    const id = c.req.param('id');
+    db.deleteWorkspace(id);
+    return c.json({ success: true });
+  });
+
+  app.post('/api/vault/export', async (c) => {
+    const body = await c.req.json<{ password: string }>();
+    if (!body.password || body.password.length < 4) {
+      return c.json({ success: false, error: 'Password must be at least 4 characters' }, 400);
+    }
+    try {
+      const data = db.getAllDataForExport();
+      const envelope = vault.exportEncryptedArchive(data, body.password);
+      return c.json({ success: true, envelope });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return c.json({ success: false, error: msg }, 500);
+    }
+  });
+
+  app.post('/api/vault/import', async (c) => {
+    const body = await c.req.json<{ envelope: import('../security/vault.js').EncryptedArchiveEnvelope; password: string }>();
+    if (!body.envelope || !body.password) {
+      return c.json({ success: false, error: 'Envelope and password are required' }, 400);
+    }
+    try {
+      const decryptedData = vault.importEncryptedArchive<Record<string, unknown>>(body.envelope, body.password);
+      db.importAllData(decryptedData);
+      return c.json({ success: true, message: 'Vault archive successfully restored' });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return c.json({ success: false, error: msg }, 400);
+    }
+  });
+
+  app.get('/api/context/scan', async (c) => {
+    const cwd = process.cwd();
+    try {
+      const fs = await import('node:fs');
+      const excludedPatterns = ['.git', 'node_modules', 'dist', '.env', '.env.local', 'openkey.sqlite'];
+      const fileList: Array<{ path: string; name: string; size: number; isSecretCandidate: boolean }> = [];
+
+      function scan(dir: string, depth: number = 0) {
+        if (depth > 4) return;
+        const entries = fs.readdirSync(dir, { withFileTypes: true });
+        for (const entry of entries) {
+          if (excludedPatterns.some((p) => entry.name === p || entry.name.endsWith('.sqlite'))) continue;
+          const full = path.join(dir, entry.name);
+          const rel = path.relative(cwd, full);
+          if (entry.isDirectory()) {
+            scan(full, depth + 1);
+          } else if (entry.isFile()) {
+            const stat = fs.statSync(full);
+            const isSecretCandidate = entry.name.includes('.env') || entry.name.includes('secret') || entry.name.endsWith('.pem');
+            fileList.push({
+              path: rel.replace(/\\/g, '/'),
+              name: entry.name,
+              size: stat.size,
+              isSecretCandidate,
+            });
+          }
+        }
+      }
+
+      scan(cwd);
+      return c.json({ cwd, files: fileList });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return c.json({ error: msg }, 500);
+    }
+  });
+
   app.get('/api/data/export', (c) => {
     const exportData = db.getAllDataForExport();
     return c.json(exportData);
   });
 
-  
   app.get('/api/usage', (c) => {
     const summary = db.getUsageSummary();
     return c.json(summary);
   });
 
-  
   app.get('/api/doctor', async (c) => {
     const checks = await doctor.runAllChecks();
     return c.json(checks);

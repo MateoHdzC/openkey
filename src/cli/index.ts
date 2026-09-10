@@ -141,46 +141,117 @@ export function createCli(): Command {
     });
 
   program
-    .command('update')
-    .alias('upgrade')
-    .description('Check for updates and upgrade OpenKey to the latest version')
-    .option('-c, --check', 'Check for updates without installing')
+    .command('proxy')
+    .description('Run local OpenAI-compatible universal proxy gateway')
+    .option('-p, --port <number>', 'Port to listen on', '3000')
     .action(async (options) => {
-      console.log(chalk.cyan.bold('\n🔄 OpenKey Update Manager\n'));
-      const updater = new UpdateManager();
+      const port = parseInt(options.port, 10) || 3000;
+      console.log(chalk.blue.bold('\n⚡ OpenKey Universal OpenAI-Compatible Proxy Gateway'));
+      console.log(chalk.gray(`Base URL: http://127.0.0.1:${port}/v1`));
+      console.log(chalk.gray(`Endpoints: POST /v1/chat/completions, GET /v1/models`));
+      console.log(chalk.cyan(`Aliases supported: coding, fast, reasoning, cheap, quality\n`));
+      await startLocalWebServer(port);
+    });
 
+  program
+    .command('presets')
+    .description('List and manage intelligent model presets')
+    .action(() => {
+      const db = new StorageDatabase();
+      const presets = db.listPresets();
+      console.log(chalk.cyan.bold('\n⚡ OpenKey Model Presets\n'));
+      for (const p of presets) {
+        console.log(
+          `  • ${chalk.bold.yellow(p.alias.padEnd(12))} -> ${chalk.green(p.providerId.toUpperCase())} / ${chalk.bold(
+            p.modelId
+          )}`
+        );
+        console.log(`    ${chalk.gray(p.description)}\n`);
+      }
+    });
+
+  program
+    .command('profiles')
+    .description('List and manage AI provider profiles')
+    .action(() => {
+      const db = new StorageDatabase();
+      const profiles = db.listProfiles();
+      console.log(chalk.cyan.bold('\n📁 OpenKey Provider Profiles\n'));
+      if (profiles.length === 0) {
+        console.log(chalk.gray('  No custom profiles saved yet. Use Web Studio or API to add profiles.\n'));
+        return;
+      }
+      for (const pr of profiles) {
+        const activeMarker = pr.isActive ? chalk.green('● (active)') : chalk.gray('○');
+        console.log(`  ${activeMarker} ${chalk.bold(pr.name)} [${pr.providerId.toUpperCase()}]`);
+        if (pr.baseUrl) console.log(`    Base URL: ${chalk.gray(pr.baseUrl)}`);
+        if (pr.models.length > 0) console.log(`    Models:   ${chalk.gray(pr.models.join(', '))}`);
+        console.log('');
+      }
+    });
+
+  program
+    .command('workspaces')
+    .description('List and switch project workspaces')
+    .action(() => {
+      const db = new StorageDatabase();
+      const workspaces = db.listWorkspaces();
+      console.log(chalk.cyan.bold('\n🏢 OpenKey Workspaces\n'));
+      for (const ws of workspaces) {
+        const activeMarker = ws.isActive ? chalk.green('● (active)') : chalk.gray('○');
+        console.log(`  ${activeMarker} ${chalk.bold(ws.name)}`);
+        console.log(`    Path:     ${chalk.gray(ws.path)}`);
+        console.log(`    Default:  ${chalk.cyan(`${ws.defaultProviderId} / ${ws.defaultModelId}`)}\n`);
+      }
+    });
+
+  program
+    .command('export')
+    .description('Export encrypted backup archive of all credentials, sessions, and configurations')
+    .option('-o, --output <file>', 'Output file path', 'openkey-backup.json')
+    .option('-p, --password <password>', 'Encryption password (required)')
+    .action(async (options) => {
+      const password = options.password;
+      if (!password || password.length < 4) {
+        console.log(chalk.red('\n✗ Error: Must provide --password with at least 4 characters.\n'));
+        return;
+      }
+      const db = new StorageDatabase();
+      const vault = new (await import('../security/vault.js')).SecretVault();
+      const data = db.getAllDataForExport();
+      const envelope = vault.exportEncryptedArchive(data, password);
+      const fs = await import('node:fs');
+      fs.writeFileSync(options.output, JSON.stringify(envelope, null, 2), 'utf8');
+      console.log(chalk.green.bold(`\n✓ Exported encrypted backup archive to: ${options.output}\n`));
+    });
+
+  program
+    .command('import')
+    .description('Import and restore an encrypted backup archive')
+    .argument('<file>', 'Path to encrypted archive JSON file')
+    .option('-p, --password <password>', 'Decryption password (required)')
+    .action(async (file, options) => {
+      const password = options.password;
+      if (!password) {
+        console.log(chalk.red('\n✗ Error: Must provide --password to decrypt archive.\n'));
+        return;
+      }
+      const fs = await import('node:fs');
+      if (!fs.existsSync(file)) {
+        console.log(chalk.red(`\n✗ Error: File ${file} does not exist.\n`));
+        return;
+      }
+      const raw = fs.readFileSync(file, 'utf8');
+      const envelope = JSON.parse(raw);
+      const db = new StorageDatabase();
+      const vault = new (await import('../security/vault.js')).SecretVault();
       try {
-        console.log(chalk.gray('Checking remote repository status...'));
-        const check = await updater.checkForUpdates();
-
-        console.log(`Current version / commit: ${chalk.bold(check.currentCommit)}`);
-        console.log(`Latest on origin/main:     ${chalk.bold.green(check.latestCommit)}`);
-        console.log(`Latest commit message:     ${chalk.italic(check.latestMessage)}`);
-        console.log(`Repository:                ${chalk.blue(check.repoUrl)}\n`);
-
-        if (!check.hasUpdate) {
-          console.log(chalk.green('✓ OpenKey is already up to date!\n'));
-          return;
-        }
-
-        if (options.check) {
-          console.log(chalk.yellow('⚡ An update is available. Run `openkey update` to install.\n'));
-          return;
-        }
-
-        console.log(chalk.yellow('🚀 Applying latest updates...'));
-        const result = await updater.applyUpdate((step) => {
-          console.log(`  ${chalk.cyan('›')} ${step}`);
-        });
-
-        if (result.success) {
-          console.log(chalk.green.bold(`\n✓ OpenKey upgraded successfully to commit ${result.updatedCommit}!\n`));
-        } else {
-          console.log(chalk.red.bold(`\n✗ Update failed: ${result.error || 'Unknown error'}\n`));
-        }
+        const data = vault.importEncryptedArchive<Record<string, unknown>>(envelope, password);
+        db.importAllData(data);
+        console.log(chalk.green.bold('\n✓ Backup archive decrypted and restored successfully into OpenKey!\n'));
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err);
-        console.log(chalk.red(`\n✗ Error communicating with repository: ${msg}\n`));
+        console.log(chalk.red.bold(`\n✗ Import failed: ${msg}\n`));
       }
     });
 

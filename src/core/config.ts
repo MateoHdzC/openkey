@@ -8,6 +8,7 @@ export interface AppConfigData {
   activeProviderId: string;
   activeModelId: string;
   activeKeyId?: string;
+  activeWorkspaceId?: string;
   customProviders: Array<{
     id: string;
     name: string;
@@ -20,6 +21,7 @@ export interface AppConfigData {
   theme: 'default' | 'minimal' | 'cyber';
   accentColor: 'red' | 'orange' | 'white' | 'black' | 'blue';
   webPort: number;
+  proxyPort?: number;
 }
 
 export const DEFAULT_CONFIG: AppConfigData = {
@@ -30,6 +32,7 @@ export const DEFAULT_CONFIG: AppConfigData = {
   theme: 'default',
   accentColor: 'blue',
   webPort: 3000,
+  proxyPort: 3000,
 };
 
 export class ConfigManager {

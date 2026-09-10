@@ -58,4 +58,21 @@ describe('Provider Registry & Adapter Discovery', () => {
     expect(adapter.meta.name).toBe('Local LM Studio');
     expect(adapter.meta.defaultModels.length).toBe(2);
   });
+
+  it('should resolve preset aliases to accurate provider and model IDs', () => {
+    const config = new ConfigManager(db);
+    const registry = new ProviderRegistry(config, db);
+
+    const coding = registry.resolvePresetOrModel('coding');
+    expect(coding.providerId).toBe('deepseek');
+    expect(coding.modelId).toBe('deepseek-chat');
+
+    const fast = registry.resolvePresetOrModel('fast');
+    expect(fast.providerId).toBe('groq');
+
+    const explicit = registry.resolvePresetOrModel('anthropic/claude-3-5-sonnet');
+    expect(explicit.providerId).toBe('anthropic');
+    expect(explicit.modelId).toBe('claude-3-5-sonnet');
+  });
 });
+

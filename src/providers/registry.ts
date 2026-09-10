@@ -88,8 +88,45 @@ export class ProviderRegistry {
   }
 
   
-  public async getCredentials(providerId: string, specificKeyId?: string): Promise<ProviderCredentials> {
+  public async getCredentials(providerId: string, specificKeyId?: string, profileId?: string): Promise<ProviderCredentials> {
     const adapter = this.getAdapter(providerId);
+
+    if (profileId) {
+      const profile = this.db.getProfile(profileId);
+      if (profile) {
+        let apiKey = '';
+        if (profile.keyId) {
+          const secret = this.db.getSecret(profile.keyId);
+          if (secret) {
+            apiKey = this.vault.decryptSecret(secret);
+            this.db.updateSecretLastUsed(secret.id);
+          }
+        }
+        return {
+          apiKey,
+          baseUrl: profile.baseUrl || adapter.meta.defaultBaseUrl,
+          headers: profile.customHeaders,
+        };
+      }
+    }
+
+    const activeProfiles = this.db.listProfiles(providerId).filter((p) => p.isActive);
+    if (activeProfiles.length > 0) {
+      const activeProfile = activeProfiles[0];
+      let apiKey = '';
+      if (activeProfile.keyId) {
+        const secret = this.db.getSecret(activeProfile.keyId);
+        if (secret) {
+          apiKey = this.vault.decryptSecret(secret);
+          this.db.updateSecretLastUsed(secret.id);
+        }
+      }
+      return {
+        apiKey,
+        baseUrl: activeProfile.baseUrl || adapter.meta.defaultBaseUrl,
+        headers: activeProfile.customHeaders,
+      };
+    }
 
     if (!adapter.meta.requiresApiKey) {
       return { apiKey: '', baseUrl: adapter.meta.defaultBaseUrl };
@@ -115,7 +152,38 @@ export class ProviderRegistry {
     };
   }
 
-  
+  public resolvePresetOrModel(input: string): { providerId: string; modelId: string; presetAlias?: string; presetName?: string } {
+    const clean = input.trim().toLowerCase();
+    const preset = this.db.getPresetByAlias(clean);
+    if (preset) {
+      return {
+        providerId: preset.providerId,
+        modelId: preset.modelId,
+        presetAlias: preset.alias,
+        presetName: preset.name,
+      };
+    }
+
+    const active = this.configManager.getActiveModelSelection();
+    for (const [id, adapter] of this.adapters.entries()) {
+      const found = adapter.meta.defaultModels.find((m) => m.id.toLowerCase() === clean);
+      if (found) {
+        return { providerId: id, modelId: found.id };
+      }
+    }
+
+    if (input.includes('/')) {
+      const [pId, ...mParts] = input.split('/');
+      const mId = mParts.join('/');
+      return { providerId: pId, modelId: mId };
+    }
+
+    return {
+      providerId: active.providerId,
+      modelId: input,
+    };
+  }
+
   public async discoverModels(providerId?: string): Promise<ModelInfo[]> {
     if (providerId) {
       const adapter = this.getAdapter(providerId);
@@ -140,3 +208,4 @@ export class ProviderRegistry {
     return allModels;
   }
 }
+

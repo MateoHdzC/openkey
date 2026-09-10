@@ -1858,6 +1858,13 @@ export function getWebHtml(): string {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ providerId, modelId })
       });
+      if (currentSessionId) {
+        await fetch('/api/sessions/' + currentSessionId + '/model', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ providerId, modelId })
+        });
+      }
       updateHeaderAndMetadata();
       closeAllModals();
     }

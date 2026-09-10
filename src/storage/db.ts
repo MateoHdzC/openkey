@@ -4,6 +4,44 @@ import os from 'node:os';
 import fs from 'node:fs';
 import type { EncryptedSecretRecord, StoredSecretMeta } from '../security/vault.js';
 
+export interface ProviderProfileRecord {
+  id: string;
+  providerId: string;
+  name: string;
+  baseUrl?: string;
+  authType: 'bearer' | 'api-key';
+  customHeaders?: Record<string, string>;
+  models: string[];
+  keyId?: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ModelPresetRecord {
+  id: string;
+  alias: string;
+  name: string;
+  providerId: string;
+  modelId: string;
+  description: string;
+  isDefault?: boolean;
+  updatedAt: string;
+}
+
+export interface WorkspaceRecord {
+  id: string;
+  name: string;
+  path: string;
+  defaultProviderId: string;
+  defaultModelId: string;
+  systemInstructions?: string;
+  contextPaths: string[];
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface UsageRecord {
   id?: number;
   timestamp: string;
@@ -23,6 +61,7 @@ export interface SessionRecord {
   title: string;
   providerId: string;
   modelId: string;
+  workspaceId?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -96,6 +135,7 @@ export class StorageDatabase {
         title TEXT NOT NULL,
         provider_id TEXT NOT NULL,
         model_id TEXT NOT NULL,
+        workspace_id TEXT,
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL
       );
@@ -114,12 +154,121 @@ export class StorageDatabase {
     `);
 
     this.db.exec(`
+      CREATE TABLE IF NOT EXISTS provider_profiles (
+        id TEXT PRIMARY KEY,
+        provider_id TEXT NOT NULL,
+        name TEXT NOT NULL,
+        base_url TEXT,
+        auth_type TEXT NOT NULL,
+        custom_headers_json TEXT,
+        models_json TEXT NOT NULL,
+        key_id TEXT,
+        is_active INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS idx_profiles_provider ON provider_profiles(provider_id);
+    `);
+
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS model_presets (
+        id TEXT PRIMARY KEY,
+        alias TEXT UNIQUE NOT NULL,
+        name TEXT NOT NULL,
+        provider_id TEXT NOT NULL,
+        model_id TEXT NOT NULL,
+        description TEXT NOT NULL,
+        is_default INTEGER NOT NULL DEFAULT 0,
+        updated_at TEXT NOT NULL
+      );
+    `);
+
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS workspaces (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        path TEXT NOT NULL,
+        default_provider_id TEXT NOT NULL,
+        default_model_id TEXT NOT NULL,
+        system_instructions TEXT,
+        context_paths_json TEXT,
+        is_active INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+    `);
+
+    this.db.exec(`
       CREATE TABLE IF NOT EXISTS app_config (
         key TEXT PRIMARY KEY,
         value TEXT NOT NULL,
         updated_at TEXT NOT NULL
       );
     `);
+
+    this.seedDefaultPresets();
+  }
+
+  private seedDefaultPresets(): void {
+    const existing = this.listPresets();
+    if (existing.length === 0) {
+      const defaults: ModelPresetRecord[] = [
+        {
+          id: 'preset_fast',
+          alias: 'fast',
+          name: 'Fast / Low Latency',
+          providerId: 'groq',
+          modelId: 'llama-3.3-70b-versatile',
+          description: 'High throughput, low latency responses for everyday queries',
+          isDefault: true,
+          updatedAt: new Date().toISOString(),
+        },
+        {
+          id: 'preset_coding',
+          alias: 'coding',
+          name: 'Coding & Architecture',
+          providerId: 'deepseek',
+          modelId: 'deepseek-chat',
+          description: 'Optimized for complex development, refactoring, and code analysis',
+          isDefault: true,
+          updatedAt: new Date().toISOString(),
+        },
+        {
+          id: 'preset_reasoning',
+          alias: 'reasoning',
+          name: 'Deep Reasoning',
+          providerId: 'openai',
+          modelId: 'o1-mini',
+          description: 'Step-by-step logic, math, multi-stage planning, and verification',
+          isDefault: true,
+          updatedAt: new Date().toISOString(),
+        },
+        {
+          id: 'preset_cheap',
+          alias: 'cheap',
+          name: 'Cost Effective',
+          providerId: 'gemini',
+          modelId: 'gemini-1.5-flash',
+          description: 'Minimal token cost with solid capability for broad tasks',
+          isDefault: true,
+          updatedAt: new Date().toISOString(),
+        },
+        {
+          id: 'preset_quality',
+          alias: 'quality',
+          name: 'Best Quality',
+          providerId: 'anthropic',
+          modelId: 'claude-3-7-sonnet-latest',
+          description: 'Top tier nuance, precision, reasoning, and instruction following',
+          isDefault: true,
+          updatedAt: new Date().toISOString(),
+        },
+      ];
+
+      for (const preset of defaults) {
+        this.savePreset(preset);
+      }
+    }
   }
 
   public saveSecret(record: EncryptedSecretRecord): void {
@@ -198,6 +347,215 @@ export class StorageDatabase {
     const stmt = this.db.prepare(`DELETE FROM secrets WHERE id = ?`);
     stmt.run(id);
     return true;
+  }
+
+  public saveProfile(profile: ProviderProfileRecord): void {
+    const stmt = this.db.prepare(`
+      INSERT OR REPLACE INTO provider_profiles (id, provider_id, name, base_url, auth_type, custom_headers_json, models_json, key_id, is_active, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+    stmt.run(
+      profile.id,
+      profile.providerId,
+      profile.name,
+      profile.baseUrl || null,
+      profile.authType,
+      profile.customHeaders ? JSON.stringify(profile.customHeaders) : null,
+      JSON.stringify(profile.models || []),
+      profile.keyId || null,
+      profile.isActive ? 1 : 0,
+      profile.createdAt,
+      profile.updatedAt
+    );
+  }
+
+  public listProfiles(providerId?: string): ProviderProfileRecord[] {
+    let stmt;
+    let rows: Record<string, unknown>[];
+    if (providerId) {
+      stmt = this.db.prepare(`SELECT * FROM provider_profiles WHERE provider_id = ? ORDER BY created_at DESC`);
+      rows = stmt.all(providerId) as Record<string, unknown>[];
+    } else {
+      stmt = this.db.prepare(`SELECT * FROM provider_profiles ORDER BY provider_id, created_at DESC`);
+      rows = stmt.all() as Record<string, unknown>[];
+    }
+
+    return rows.map((r) => ({
+      id: r.id as string,
+      providerId: r.provider_id as string,
+      name: r.name as string,
+      baseUrl: (r.base_url as string) || undefined,
+      authType: (r.auth_type as 'bearer' | 'api-key') || 'bearer',
+      customHeaders: r.custom_headers_json ? JSON.parse(r.custom_headers_json as string) : undefined,
+      models: r.models_json ? JSON.parse(r.models_json as string) : [],
+      keyId: (r.key_id as string) || undefined,
+      isActive: Boolean(r.is_active),
+      createdAt: r.created_at as string,
+      updatedAt: r.updated_at as string,
+    }));
+  }
+
+  public getProfile(id: string): ProviderProfileRecord | null {
+    const stmt = this.db.prepare(`SELECT * FROM provider_profiles WHERE id = ?`);
+    const r = stmt.get(id) as Record<string, unknown> | undefined;
+    if (!r) return null;
+    return {
+      id: r.id as string,
+      providerId: r.provider_id as string,
+      name: r.name as string,
+      baseUrl: (r.base_url as string) || undefined,
+      authType: (r.auth_type as 'bearer' | 'api-key') || 'bearer',
+      customHeaders: r.custom_headers_json ? JSON.parse(r.custom_headers_json as string) : undefined,
+      models: r.models_json ? JSON.parse(r.models_json as string) : [],
+      keyId: (r.key_id as string) || undefined,
+      isActive: Boolean(r.is_active),
+      createdAt: r.created_at as string,
+      updatedAt: r.updated_at as string,
+    };
+  }
+
+  public deleteProfile(id: string): void {
+    const stmt = this.db.prepare(`DELETE FROM provider_profiles WHERE id = ?`);
+    stmt.run(id);
+  }
+
+  public setActiveProfile(id: string, providerId: string): void {
+    const reset = this.db.prepare(`UPDATE provider_profiles SET is_active = 0 WHERE provider_id = ?`);
+    reset.run(providerId);
+    const set = this.db.prepare(`UPDATE provider_profiles SET is_active = 1, updated_at = ? WHERE id = ?`);
+    set.run(new Date().toISOString(), id);
+  }
+
+  public savePreset(preset: ModelPresetRecord): void {
+    const stmt = this.db.prepare(`
+      INSERT OR REPLACE INTO model_presets (id, alias, name, provider_id, model_id, description, is_default, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+    stmt.run(
+      preset.id,
+      preset.alias.toLowerCase(),
+      preset.name,
+      preset.providerId,
+      preset.modelId,
+      preset.description,
+      preset.isDefault ? 1 : 0,
+      preset.updatedAt
+    );
+  }
+
+  public listPresets(): ModelPresetRecord[] {
+    const stmt = this.db.prepare(`SELECT * FROM model_presets ORDER BY alias ASC`);
+    const rows = stmt.all() as Record<string, unknown>[];
+    return rows.map((r) => ({
+      id: r.id as string,
+      alias: r.alias as string,
+      name: r.name as string,
+      providerId: r.provider_id as string,
+      modelId: r.model_id as string,
+      description: r.description as string,
+      isDefault: Boolean(r.is_default),
+      updatedAt: r.updated_at as string,
+    }));
+  }
+
+  public getPresetByAlias(alias: string): ModelPresetRecord | null {
+    const stmt = this.db.prepare(`SELECT * FROM model_presets WHERE alias = ?`);
+    const r = stmt.get(alias.toLowerCase()) as Record<string, unknown> | undefined;
+    if (!r) return null;
+    return {
+      id: r.id as string,
+      alias: r.alias as string,
+      name: r.name as string,
+      providerId: r.provider_id as string,
+      modelId: r.model_id as string,
+      description: r.description as string,
+      isDefault: Boolean(r.is_default),
+      updatedAt: r.updated_at as string,
+    };
+  }
+
+  public saveWorkspace(ws: WorkspaceRecord): void {
+    const stmt = this.db.prepare(`
+      INSERT OR REPLACE INTO workspaces (id, name, path, default_provider_id, default_model_id, system_instructions, context_paths_json, is_active, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+    stmt.run(
+      ws.id,
+      ws.name,
+      ws.path,
+      ws.defaultProviderId,
+      ws.defaultModelId,
+      ws.systemInstructions || null,
+      JSON.stringify(ws.contextPaths || []),
+      ws.isActive ? 1 : 0,
+      ws.createdAt,
+      ws.updatedAt
+    );
+  }
+
+  public listWorkspaces(): WorkspaceRecord[] {
+    const stmt = this.db.prepare(`SELECT * FROM workspaces ORDER BY updated_at DESC`);
+    const rows = stmt.all() as Record<string, unknown>[];
+    return rows.map((r) => ({
+      id: r.id as string,
+      name: r.name as string,
+      path: r.path as string,
+      defaultProviderId: r.default_provider_id as string,
+      defaultModelId: r.default_model_id as string,
+      systemInstructions: (r.system_instructions as string) || undefined,
+      contextPaths: r.context_paths_json ? JSON.parse(r.context_paths_json as string) : [],
+      isActive: Boolean(r.is_active),
+      createdAt: r.created_at as string,
+      updatedAt: r.updated_at as string,
+    }));
+  }
+
+  public getWorkspace(id: string): WorkspaceRecord | null {
+    const stmt = this.db.prepare(`SELECT * FROM workspaces WHERE id = ?`);
+    const r = stmt.get(id) as Record<string, unknown> | undefined;
+    if (!r) return null;
+    return {
+      id: r.id as string,
+      name: r.name as string,
+      path: r.path as string,
+      defaultProviderId: r.default_provider_id as string,
+      defaultModelId: r.default_model_id as string,
+      systemInstructions: (r.system_instructions as string) || undefined,
+      contextPaths: r.context_paths_json ? JSON.parse(r.context_paths_json as string) : [],
+      isActive: Boolean(r.is_active),
+      createdAt: r.created_at as string,
+      updatedAt: r.updated_at as string,
+    };
+  }
+
+  public getActiveWorkspace(): WorkspaceRecord | null {
+    const stmt = this.db.prepare(`SELECT * FROM workspaces WHERE is_active = 1 LIMIT 1`);
+    const r = stmt.get() as Record<string, unknown> | undefined;
+    if (!r) return null;
+    return {
+      id: r.id as string,
+      name: r.name as string,
+      path: r.path as string,
+      defaultProviderId: r.default_provider_id as string,
+      defaultModelId: r.default_model_id as string,
+      systemInstructions: (r.system_instructions as string) || undefined,
+      contextPaths: r.context_paths_json ? JSON.parse(r.context_paths_json as string) : [],
+      isActive: Boolean(r.is_active),
+      createdAt: r.created_at as string,
+      updatedAt: r.updated_at as string,
+    };
+  }
+
+  public setActiveWorkspace(id: string): void {
+    this.db.prepare(`UPDATE workspaces SET is_active = 0`).run();
+    this.db.prepare(`UPDATE workspaces SET is_active = 1, updated_at = ? WHERE id = ?`).run(
+      new Date().toISOString(),
+      id
+    );
+  }
+
+  public deleteWorkspace(id: string): void {
+    this.db.prepare(`DELETE FROM workspaces WHERE id = ?`).run(id);
   }
 
   public logUsage(record: UsageRecord): void {
@@ -288,10 +646,18 @@ export class StorageDatabase {
 
   public createSession(session: SessionRecord): void {
     const stmt = this.db.prepare(`
-      INSERT INTO sessions (id, title, provider_id, model_id, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?)
+      INSERT INTO sessions (id, title, provider_id, model_id, workspace_id, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
     `);
-    stmt.run(session.id, session.title, session.providerId, session.modelId, session.createdAt, session.updatedAt);
+    stmt.run(
+      session.id,
+      session.title,
+      session.providerId,
+      session.modelId,
+      session.workspaceId || null,
+      session.createdAt,
+      session.updatedAt
+    );
   }
 
   public listSessions(): SessionRecord[] {
@@ -302,6 +668,7 @@ export class StorageDatabase {
       title: r.title as string,
       providerId: r.provider_id as string,
       modelId: r.model_id as string,
+      workspaceId: (r.workspace_id as string) || undefined,
       createdAt: r.created_at as string,
       updatedAt: r.updated_at as string,
     }));
@@ -316,6 +683,7 @@ export class StorageDatabase {
       title: row.title as string,
       providerId: row.provider_id as string,
       modelId: row.model_id as string,
+      workspaceId: (row.workspace_id as string) || undefined,
       createdAt: row.created_at as string,
       updatedAt: row.updated_at as string,
     };
@@ -374,8 +742,11 @@ export class StorageDatabase {
     sessions: SessionRecord[];
     messages: MessageRecord[];
     usage: UsageRecord[];
+    profiles: ProviderProfileRecord[];
+    presets: ModelPresetRecord[];
+    workspaces: WorkspaceRecord[];
     config: Record<string, string>;
-    secretsMeta: StoredSecretMeta[];
+    secrets: EncryptedSecretRecord[];
   } {
     const sessions = this.listSessions();
     const allMessages = (this.db.prepare(`SELECT * FROM messages`).all() as Record<string, unknown>[]).map((r) => ({
@@ -405,17 +776,86 @@ export class StorageDatabase {
     for (const row of configRows) {
       config[row.key as string] = row.value as string;
     }
-    const secretsMeta = this.listSecretsMeta();
+    const secretRows = (this.db.prepare(`SELECT * FROM secrets`).all() as Record<string, unknown>[]).map((row) => ({
+      id: row.id as string,
+      providerId: row.provider_id as string,
+      name: row.name as string,
+      maskedKey: row.masked_key as string,
+      ciphertext: row.ciphertext as string,
+      iv: row.iv as string,
+      authTag: row.auth_tag as string,
+      salt: row.salt as string,
+      createdAt: row.created_at as string,
+      lastUsedAt: (row.last_used_at as string) || undefined,
+    }));
 
     return {
-      version: '2.0.0',
+      version: '2.1.0',
       exportedAt: new Date().toISOString(),
       sessions,
       messages: allMessages,
       usage: usageLogs,
+      profiles: this.listProfiles(),
+      presets: this.listPresets(),
+      workspaces: this.listWorkspaces(),
       config,
-      secretsMeta,
+      secrets: secretRows,
     };
+  }
+
+  public importAllData(data: {
+    sessions?: SessionRecord[];
+    messages?: MessageRecord[];
+    usage?: UsageRecord[];
+    profiles?: ProviderProfileRecord[];
+    presets?: ModelPresetRecord[];
+    workspaces?: WorkspaceRecord[];
+    config?: Record<string, string>;
+    secrets?: EncryptedSecretRecord[];
+  }): void {
+    if (data.secrets && Array.isArray(data.secrets)) {
+      for (const secret of data.secrets) {
+        this.saveSecret(secret);
+      }
+    }
+    if (data.profiles && Array.isArray(data.profiles)) {
+      for (const profile of data.profiles) {
+        this.saveProfile(profile);
+      }
+    }
+    if (data.presets && Array.isArray(data.presets)) {
+      for (const preset of data.presets) {
+        this.savePreset(preset);
+      }
+    }
+    if (data.workspaces && Array.isArray(data.workspaces)) {
+      for (const ws of data.workspaces) {
+        this.saveWorkspace(ws);
+      }
+    }
+    if (data.sessions && Array.isArray(data.sessions)) {
+      for (const s of data.sessions) {
+        const stmt = this.db.prepare(`
+          INSERT OR REPLACE INTO sessions (id, title, provider_id, model_id, workspace_id, created_at, updated_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?)
+        `);
+        stmt.run(s.id, s.title, s.providerId, s.modelId, s.workspaceId || null, s.createdAt, s.updatedAt);
+      }
+    }
+    if (data.messages && Array.isArray(data.messages)) {
+      for (const m of data.messages) {
+        const stmt = this.db.prepare(`
+          INSERT OR REPLACE INTO messages (id, session_id, role, content, tool_calls, tool_call_id, timestamp)
+          VALUES (?, ?, ?, ?, ?, ?, ?)
+        `);
+        stmt.run(m.id || null, m.sessionId, m.role, m.content, m.toolCalls || null, m.toolCallId || null, m.timestamp);
+      }
+    }
+    if (data.config && typeof data.config === 'object') {
+      for (const [k, v] of Object.entries(data.config)) {
+        this.setConfig(k, v);
+      }
+    }
   }
 
   public setConfig(key: string, value: string): void {
