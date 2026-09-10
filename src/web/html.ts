@@ -1480,6 +1480,16 @@ export function getWebHtml(): string {
       if (tabId === 'usage') loadUsageData();
     }
 
+    function escapeHtml(str) {
+      if (str === null || str === undefined) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
     async function refreshCatalogData() {
       try {
         const res = await fetch('/api/providers');
@@ -1495,7 +1505,7 @@ export function getWebHtml(): string {
     function populateKeyProviderDropdowns() {
       const select = document.getElementById('addKeyProviderSelect');
       if (!select) return;
-      select.innerHTML = catalog.map(p => \`<option value="\${p.id}">\${p.name} (\${p.id})</option>\`).join('');
+      select.innerHTML = catalog.map(p => `<option value="${escapeHtml(p.id)}">${escapeHtml(p.name)} (${escapeHtml(p.id)})</option>`).join('');
     }
 
     function updateHeaderAndMetadata() {
@@ -1511,7 +1521,7 @@ export function getWebHtml(): string {
       document.getElementById('welcomeScreenHero').style.display = 'flex';
       const feed = document.getElementById('chatFeedList');
       feed.style.display = 'none';
-      feed.innerHTML = '';
+      while (feed.firstChild) feed.removeChild(feed.firstChild);
       navigateTo('chat');
     }
 
@@ -1538,7 +1548,7 @@ export function getWebHtml(): string {
       reader.onload = (event) => {
         const content = event.target?.result;
         const textarea = document.getElementById('chatPromptInput');
-        textarea.value += \`\\n[Attached: \${file.name}]\\n\` + content + \`\\n\`;
+        textarea.value += `\\n[Attached: ${file.name}]\\n` + content + `\\n`;
         textarea.focus();
       };
       reader.readAsText(file);
@@ -1559,7 +1569,7 @@ export function getWebHtml(): string {
       const start = textarea.selectionStart || 0;
       const end = textarea.selectionEnd || 0;
       const current = textarea.value;
-      const snippet = "\\n\`\`\`typescript\\n// code here\\n\`\`\`\\n";
+      const snippet = "\\n```typescript\\n// code here\\n```\\n";
       textarea.value = current.substring(0, start) + snippet + current.substring(end);
       textarea.focus();
     }
@@ -1569,15 +1579,29 @@ export function getWebHtml(): string {
         const res = await fetch('/api/workspace/files');
         const data = await res.json();
         const list = document.getElementById('wsFilesModalList');
-        list.innerHTML = (data.files || []).map(f => \`
-          <div style="padding:0.55rem 0.85rem; background:var(--bg-elevated); border:1px solid var(--border-subtle); border-radius:var(--radius-md); display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="attachWorkspaceFile('\${f.path}')">
-            <div style="display:flex; align-items:center; gap:0.5rem;">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-              <span style="font-family:var(--font-mono); font-size:0.82rem;">\${f.name}</span>
-            </div>
-            <span style="font-size:0.75rem; color:var(--blue-bright);">Attach</span>
-          </div>
-        \`).join('');
+        while (list.firstChild) list.removeChild(list.firstChild);
+        (data.files || []).forEach(f => {
+          const item = document.createElement('div');
+          item.style.cssText = 'padding:0.55rem 0.85rem; background:var(--bg-elevated); border:1px solid var(--border-subtle); border-radius:var(--radius-md); display:flex; justify-content:space-between; align-items:center; cursor:pointer;';
+          item.onclick = () => attachWorkspaceFile(f.path);
+          
+          const left = document.createElement('div');
+          left.style.cssText = 'display:flex; align-items:center; gap:0.5rem;';
+          left.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>';
+          
+          const nameSpan = document.createElement('span');
+          nameSpan.style.cssText = 'font-family:var(--font-mono); font-size:0.82rem;';
+          nameSpan.textContent = f.name;
+          left.appendChild(nameSpan);
+
+          const right = document.createElement('span');
+          right.style.cssText = 'font-size:0.75rem; color:var(--blue-bright);';
+          right.textContent = 'Attach';
+
+          item.appendChild(left);
+          item.appendChild(right);
+          list.appendChild(item);
+        });
         document.getElementById('wsFilesModal').classList.add('open');
       } catch {}
     }
@@ -1591,7 +1615,7 @@ export function getWebHtml(): string {
         });
         const data = await res.json();
         const textarea = document.getElementById('chatPromptInput');
-        textarea.value += \`\\n[File: \${filePath}]\\n\` + data.content + \`\\n\`;
+        textarea.value += `\\n[File: ${filePath}]\\n` + data.content + `\\n`;
         closeAllModals();
         textarea.focus();
       } catch {}
@@ -1612,24 +1636,33 @@ export function getWebHtml(): string {
 
       const userCard = document.createElement('div');
       userCard.className = 'chat-msg-card user';
-      userCard.innerHTML = \`
-        <div class="msg-header-row">
-          <span class="msg-badge user">YOU</span>
-          <span style="color:var(--text-muted); font-family:var(--font-mono);">\${new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>
-        </div>
-        <div style="color:#FFFFFF; white-space:pre-wrap;">\${text}</div>
-      \`;
+
+      const userHeader = document.createElement('div');
+      userHeader.className = 'msg-header-row';
+      userHeader.innerHTML = '<span class="msg-badge user">YOU</span><span style="color:var(--text-muted); font-family:var(--font-mono);">' + escapeHtml(new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})) + '</span>';
+      
+      const userBody = document.createElement('div');
+      userBody.style.cssText = 'color:#FFFFFF; white-space:pre-wrap;';
+      userBody.textContent = text;
+
+      userCard.appendChild(userHeader);
+      userCard.appendChild(userBody);
       feed.appendChild(userCard);
 
       const aiCard = document.createElement('div');
       aiCard.className = 'chat-msg-card assistant';
-      aiCard.innerHTML = \`
-        <div class="msg-header-row">
-          <span class="msg-badge ai">AI (\${activeModel})</span>
-          <span style="color:var(--text-muted); font-family:var(--font-mono);">\${new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>
-        </div>
-        <div class="ai-body-content" style="color:#FFFFFF; white-space:pre-wrap;">...</div>
-      \`;
+
+      const aiHeader = document.createElement('div');
+      aiHeader.className = 'msg-header-row';
+      aiHeader.innerHTML = '<span class="msg-badge ai">AI (' + escapeHtml(activeModel) + ')</span><span style="color:var(--text-muted); font-family:var(--font-mono);">' + escapeHtml(new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})) + '</span>';
+
+      const aiBody = document.createElement('div');
+      aiBody.className = 'ai-body-content';
+      aiBody.style.cssText = 'color:#FFFFFF; white-space:pre-wrap;';
+      aiBody.textContent = '...';
+
+      aiCard.appendChild(aiHeader);
+      aiCard.appendChild(aiBody);
       feed.appendChild(aiCard);
 
       const centerView = document.getElementById('mainCenterView');
@@ -1686,12 +1719,12 @@ export function getWebHtml(): string {
           list.innerHTML = '<span style="font-size:0.72rem; color:var(--text-muted);">No recent sessions.</span>';
           return;
         }
-        list.innerHTML = cachedSessions.slice(0, 5).map(s => \`
-          <div class="recent-session-entry" onclick="resumeSession('\${s.id}')">
-            <span class="recent-session-title">○ \${s.title}</span>
-            <span class="recent-session-time">\${timeAgo(s.updatedAt)}</span>
+        list.innerHTML = cachedSessions.slice(0, 5).map(s => `
+          <div class="recent-session-entry" onclick="resumeSession('${escapeHtml(s.id)}')">
+            <span class="recent-session-title">○ ${escapeHtml(s.title)}</span>
+            <span class="recent-session-time">${escapeHtml(timeAgo(s.updatedAt))}</span>
           </div>
-        \`).join('');
+        `).join('');
       } catch {}
     }
 
@@ -1706,7 +1739,7 @@ export function getWebHtml(): string {
     }
 
     async function resumeSession(id) {
-      const res = await fetch('/api/sessions/' + id);
+      const res = await fetch('/api/sessions/' + encodeURIComponent(id));
       const session = await res.json();
       currentSessionId = session.id;
       activeProvider = session.providerId;
@@ -1716,19 +1749,23 @@ export function getWebHtml(): string {
       document.getElementById('welcomeScreenHero').style.display = 'none';
       const feed = document.getElementById('chatFeedList');
       feed.style.display = 'flex';
-      feed.innerHTML = '';
+      while (feed.firstChild) feed.removeChild(feed.firstChild);
 
       (session.messages || []).forEach(m => {
         const isUser = m.role === 'user';
         const card = document.createElement('div');
         card.className = 'chat-msg-card ' + (isUser ? 'user' : 'assistant');
-        card.innerHTML = \`
-          <div class="msg-header-row">
-            <span class="msg-badge \${isUser ? 'user' : 'ai'}">\${isUser ? 'YOU' : 'AI'}</span>
-            <span style="color:var(--text-muted); font-family:var(--font-mono);">\${new Date(m.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>
-          </div>
-          <div style="color:#FFFFFF; white-space:pre-wrap;">\${m.content}</div>
-        \`;
+
+        const header = document.createElement('div');
+        header.className = 'msg-header-row';
+        header.innerHTML = '<span class="msg-badge ' + (isUser ? 'user' : 'ai') + '">' + (isUser ? 'YOU' : 'AI') + '</span><span style="color:var(--text-muted); font-family:var(--font-mono);">' + escapeHtml(new Date(m.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})) + '</span>';
+
+        const body = document.createElement('div');
+        body.style.cssText = 'color:#FFFFFF; white-space:pre-wrap;';
+        body.textContent = m.content;
+
+        card.appendChild(header);
+        card.appendChild(body);
         feed.appendChild(card);
       });
 
@@ -1739,16 +1776,16 @@ export function getWebHtml(): string {
       const res = await fetch('/api/sessions');
       const sessions = await res.json();
       const tbody = document.getElementById('sessionsFullTableBody');
-      tbody.innerHTML = sessions.map(s => \`
+      tbody.innerHTML = sessions.map(s => `
         <tr>
-          <td><strong>\${s.title}</strong></td>
-          <td class="mono">\${s.modelId}</td>
-          <td class="mono" style="color:var(--text-muted);">\${new Date(s.updatedAt).toLocaleString()}</td>
+          <td><strong>${escapeHtml(s.title)}</strong></td>
+          <td class="mono">${escapeHtml(s.modelId)}</td>
+          <td class="mono" style="color:var(--text-muted);">${escapeHtml(new Date(s.updatedAt).toLocaleString())}</td>
           <td>
-            <button class="quick-action-pill" onclick="resumeSession('\${s.id}')">Open</button>
+            <button class="quick-action-pill" onclick="resumeSession('${escapeHtml(s.id)}')">Open</button>
           </td>
         </tr>
-      \`).join('');
+      `).join('');
     }
 
     async function loadWorkspaceFilesTab() {
@@ -1756,16 +1793,16 @@ export function getWebHtml(): string {
         const res = await fetch('/api/workspace/files');
         const data = await res.json();
         const tbody = document.getElementById('filesTableBody');
-        tbody.innerHTML = (data.files || []).map(f => \`
+        tbody.innerHTML = (data.files || []).map(f => `
           <tr>
-            <td class="mono"><strong>\${f.path}</strong></td>
-            <td>\${f.isDirectory ? 'Directory' : 'File'}</td>
-            <td class="mono">\${f.size ? f.size + ' B' : '—'}</td>
+            <td class="mono"><strong>${escapeHtml(f.path)}</strong></td>
+            <td>${f.isDirectory ? 'Directory' : 'File'}</td>
+            <td class="mono">${f.size ? escapeHtml(String(f.size)) + ' B' : '—'}</td>
             <td>
-              <button class="quick-action-pill" onclick="attachWorkspaceFile('\${f.path}')">Attach to Chat</button>
+              <button class="quick-action-pill" onclick="attachWorkspaceFile('${escapeHtml(f.path)}')">Attach to Chat</button>
             </td>
           </tr>
-        \`).join('');
+        `).join('');
       } catch {}
     }
 
@@ -1775,14 +1812,14 @@ export function getWebHtml(): string {
       catalog = data.providers || [];
       populateKeyProviderDropdowns();
       const tbody = document.getElementById('providersTableBody');
-      tbody.innerHTML = catalog.map(p => \`
+      tbody.innerHTML = catalog.map(p => `
         <tr>
-          <td><strong>\${p.name}</strong> <span style="font-family:var(--font-mono); font-size:0.72rem; color:var(--text-muted);">(\${p.id})</span></td>
-          <td class="mono">\${p.models?.length || 0} models</td>
+          <td><strong>${escapeHtml(p.name)}</strong> <span style="font-family:var(--font-mono); font-size:0.72rem; color:var(--text-muted);">(${escapeHtml(p.id)})</span></td>
+          <td class="mono">${escapeHtml(String(p.models?.length || 0))} models</td>
           <td><span style="color:var(--success);">Connected</span></td>
-          <td><button class="quick-action-pill" onclick="openAddKeyForProvider('\${p.id}')">Add Key</button></td>
+          <td><button class="quick-action-pill" onclick="openAddKeyForProvider('${escapeHtml(p.id)}')">Add Key</button></td>
         </tr>
-      \`).join('');
+      `).join('');
     }
 
     function openAddProviderModal() {
@@ -1837,14 +1874,14 @@ export function getWebHtml(): string {
       let rows = [];
       catalog.forEach(p => {
         (p.models || []).forEach(m => {
-          rows.push(\`
+          rows.push(`
             <tr>
-              <td class="mono"><strong>\${m.id}</strong></td>
-              <td>\${p.name}</td>
-              <td style="color:var(--text-muted);">Text · Streaming \${m.capabilities?.tools ? '· Tools' : ''} \${m.capabilities?.reasoning ? '· Reasoning' : ''}</td>
-              <td><button class="quick-action-pill" onclick="selectActiveModel('\${p.id}', '\${m.id}')">Select</button></td>
+              <td class="mono"><strong>${escapeHtml(m.id)}</strong></td>
+              <td>${escapeHtml(p.name)}</td>
+              <td style="color:var(--text-muted);">Text · Streaming ${m.capabilities?.tools ? '· Tools' : ''} ${m.capabilities?.reasoning ? '· Reasoning' : ''}</td>
+              <td><button class="quick-action-pill" onclick="selectActiveModel('${escapeHtml(p.id)}', '${escapeHtml(m.id)}')">Select</button></td>
             </tr>
-          \`);
+          `);
         });
       });
       tbody.innerHTML = rows.join('');
@@ -1859,7 +1896,7 @@ export function getWebHtml(): string {
         body: JSON.stringify({ providerId, modelId })
       });
       if (currentSessionId) {
-        await fetch('/api/sessions/' + currentSessionId + '/model', {
+        await fetch('/api/sessions/' + encodeURIComponent(currentSessionId) + '/model', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ providerId, modelId })
@@ -1874,15 +1911,15 @@ export function getWebHtml(): string {
       const keys = await res.json();
       const tbody = document.getElementById('keysTableBody');
       document.getElementById('metaKeysVal').textContent = keys.length + ' connected';
-      tbody.innerHTML = keys.map(k => \`
+      tbody.innerHTML = keys.map(k => `
         <tr>
-          <td><strong>\${k.providerId.toUpperCase()}</strong></td>
-          <td class="mono">\${k.name}</td>
-          <td class="mono">\${k.maskedKey}</td>
+          <td><strong>${escapeHtml(k.providerId.toUpperCase())}</strong></td>
+          <td class="mono">${escapeHtml(k.name)}</td>
+          <td class="mono">${escapeHtml(k.maskedKey)}</td>
           <td><span style="color:var(--success);">Encrypted</span></td>
-          <td><button class="quick-action-pill" style="color:var(--danger);" onclick="deleteKey('\${k.id}')">Delete</button></td>
+          <td><button class="quick-action-pill" style="color:var(--danger);" onclick="deleteKey('${escapeHtml(k.id)}')">Delete</button></td>
         </tr>
-      \`).join('');
+      `).join('');
     }
 
     async function saveNewKey() {
@@ -1899,25 +1936,25 @@ export function getWebHtml(): string {
     }
 
     async function deleteKey(id) {
-      await fetch('/api/keys/' + id, { method: 'DELETE' });
+      await fetch('/api/keys/' + encodeURIComponent(id), { method: 'DELETE' });
       loadKeysList();
     }
 
     async function loadUsageData() {
       const res = await fetch('/api/usage');
       const d = await res.json();
-      document.getElementById('metaTokensVal').textContent = d.totalTokens.toLocaleString();
-      document.getElementById('metaRequestsVal').textContent = d.totalRequests.toLocaleString();
-      document.getElementById('metaCostVal').textContent = '$' + (d.totalTokens * 0.000004).toFixed(2);
+      document.getElementById('metaTokensVal').textContent = (d.totalTokens || 0).toLocaleString();
+      document.getElementById('metaRequestsVal').textContent = (d.totalRequests || 0).toLocaleString();
+      document.getElementById('metaCostVal').textContent = '$' + ((d.totalTokens || 0) * 0.000004).toFixed(2);
 
       const tbody = document.getElementById('usageTableBody');
-      tbody.innerHTML = (d.byProvider || []).map(p => \`
+      tbody.innerHTML = (d.byProvider || []).map(p => `
         <tr>
-          <td><strong>\${p.providerId.toUpperCase()}</strong></td>
-          <td class="mono">\${p.requests}</td>
-          <td class="mono">\${p.totalTokens.toLocaleString()}</td>
+          <td><strong>${escapeHtml(p.providerId.toUpperCase())}</strong></td>
+          <td class="mono">${escapeHtml(String(p.requests))}</td>
+          <td class="mono">${escapeHtml(Number(p.totalTokens || 0).toLocaleString())}</td>
         </tr>
-      \`).join('');
+      `).join('');
     }
 
     async function loadOverviewData() {
@@ -1939,15 +1976,15 @@ export function getWebHtml(): string {
       catalog.forEach(p => {
         (p.models || []).forEach(m => {
           if (!q || m.id.toLowerCase().includes(q.toLowerCase()) || p.name.toLowerCase().includes(q.toLowerCase())) {
-            items.push(\`
-              <div style="padding:0.6rem 0.85rem; background:var(--bg-elevated); border:1px solid var(--border-subtle); border-radius:var(--radius-md); display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="selectActiveModel('\${p.id}', '\${m.id}')">
+            items.push(`
+              <div style="padding:0.6rem 0.85rem; background:var(--bg-elevated); border:1px solid var(--border-subtle); border-radius:var(--radius-md); display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="selectActiveModel('${escapeHtml(p.id)}', '${escapeHtml(m.id)}')">
                 <div>
-                  <div style="font-weight:700; font-size:0.85rem;">\${m.id}</div>
-                  <div style="font-size:0.7rem; color:var(--text-muted);">\${p.name}</div>
+                  <div style="font-weight:700; font-size:0.85rem;">${escapeHtml(m.id)}</div>
+                  <div style="font-size:0.7rem; color:var(--text-muted);">${escapeHtml(p.name)}</div>
                 </div>
-                \${m.id === activeModel ? '<span style="color:var(--blue-bright); font-size:0.75rem;">● Active</span>' : ''}
+                ${m.id === activeModel ? '<span style="color:var(--blue-bright); font-size:0.75rem;">● Active</span>' : ''}
               </div>
-            \`);
+            `);
           }
         });
       });
@@ -1981,20 +2018,20 @@ export function getWebHtml(): string {
         })
       });
       const data = await res.json();
-      grid.innerHTML = (data.results || []).map(r => \`
+      grid.innerHTML = (data.results || []).map(r => `
         <div style="background:var(--bg-elevated); border:1px solid var(--border-subtle); border-radius:var(--radius-md); padding:0.85rem; display:flex; flex-direction:column; gap:0.5rem;">
-          <div style="font-weight:700; font-size:0.82rem; color:var(--blue-bright);">\${r.modelId}</div>
+          <div style="font-weight:700; font-size:0.82rem; color:var(--blue-bright);">${escapeHtml(r.modelId)}</div>
           <div style="font-size:0.72rem; font-family:var(--font-mono); color:var(--text-muted); border-bottom:1px solid var(--border-subtle); padding-bottom:0.35rem;">
-            ⏱ \${r.durationSec}s · \${r.tokens} tok
+            ⏱ ${escapeHtml(String(r.durationSec))}s · ${escapeHtml(String(r.tokens))} tok
           </div>
-          <div style="font-size:0.8rem; line-height:1.5; color:#fff; white-space:pre-wrap; max-height:220px; overflow-y:auto;">\${r.content || r.error}</div>
+          <div style="font-size:0.8rem; line-height:1.5; color:#fff; white-space:pre-wrap; max-height:220px; overflow-y:auto;">${escapeHtml(r.content || r.error)}</div>
         </div>
-      \`).join('');
+      `).join('');
     }
 
     function openWsModal() {
       const list = document.getElementById('wsModalList');
-      list.innerHTML = \`
+      list.innerHTML = `
         <div style="padding:0.75rem; background:var(--bg-elevated); border:1px solid var(--border-blue); border-radius:var(--radius-md); margin-bottom:0.5rem; display:flex; justify-content:space-between; align-items:center;">
           <div>
             <div style="font-weight:700;">Personal Workspace</div>
@@ -2002,7 +2039,7 @@ export function getWebHtml(): string {
           </div>
           <span style="color:var(--success);">● Active</span>
         </div>
-      \`;
+      `;
       document.getElementById('wsModal').classList.add('open');
     }
 
@@ -2026,10 +2063,10 @@ export function getWebHtml(): string {
         const res = await fetch('/api/update/check');
         const data = await res.json();
         if (data.hasUpdate) {
-          statusEl.innerHTML = \`Update available: <strong>\${data.latestCommit}</strong> — <em>\${data.latestMessage}</em>\`;
+          statusEl.innerHTML = 'Update available: <strong>' + escapeHtml(data.latestCommit) + '</strong> — <em>' + escapeHtml(data.latestMessage) + '</em>';
           btnApply.style.display = 'inline-block';
         } else {
-          statusEl.textContent = \`OpenKey is up to date (commit \${data.currentCommit || 'latest'}).\`;
+          statusEl.textContent = `OpenKey is up to date (commit ${data.currentCommit || 'latest'}).`;
           btnApply.style.display = 'none';
         }
       } catch {
@@ -2046,9 +2083,9 @@ export function getWebHtml(): string {
         const res = await fetch('/api/update/apply', { method: 'POST' });
         const data = await res.json();
         if (data.success) {
-          statusEl.textContent = \`Upgraded successfully to \${data.updatedCommit}! Restart OpenKey to load changes.\`;
+          statusEl.textContent = `Upgraded successfully to ${data.updatedCommit}! Restart OpenKey to load changes.`;
         } else {
-          statusEl.textContent = \`Update failed: \${data.error || 'Unknown error'}\`;
+          statusEl.textContent = `Update failed: ${data.error || 'Unknown error'}`;
           btnApply.style.display = 'inline-block';
         }
       } catch {
@@ -2067,11 +2104,11 @@ export function getWebHtml(): string {
     function renderCmdList(q) {
       const list = document.getElementById('cmdPaletteList');
       const filtered = commandRegistry.filter(c => !q || c.label.toLowerCase().includes(q.toLowerCase()));
-      list.innerHTML = filtered.map((c, i) => \`
-        <div style="padding:0.6rem 0.85rem; border-radius:var(--radius-md); font-size:0.85rem; cursor:pointer; color:var(--text-secondary);" onmouseover="this.style.background='var(--blue-soft)'; this.style.color='#fff';" onmouseout="this.style.background='transparent'; this.style.color='var(--text-secondary)';" onclick="commandRegistry[\${commandRegistry.indexOf(c)}].action(); closeAllModals();">
-          \${c.label}
+      list.innerHTML = filtered.map((c, i) => `
+        <div style="padding:0.6rem 0.85rem; border-radius:var(--radius-md); font-size:0.85rem; cursor:pointer; color:var(--text-secondary);" onmouseover="this.style.background='var(--blue-soft)'; this.style.color='#fff';" onmouseout="this.style.background='transparent'; this.style.color='var(--text-secondary)';" onclick="commandRegistry[${commandRegistry.indexOf(c)}].action(); closeAllModals();">
+          ${escapeHtml(c.label)}
         </div>
-      \`).join('');
+      `).join('');
     }
 
     function closeAllModals() {
