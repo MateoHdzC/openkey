@@ -1568,7 +1568,9 @@ export function getWebHtml(): string {
       const textarea = document.getElementById('chatPromptInput');
       const start = textarea.selectionStart || 0;
       const end = textarea.selectionEnd || 0;
-      const snippet = '\n' + '```' + 'typescript\n// code here\n' + '```' + '\n';
+      const current = textarea.value;
+      const ticks = String.fromCharCode(96, 96, 96);
+      const snippet = '\n' + ticks + 'typescript\n// code here\n' + ticks + '\n';
       textarea.value = current.substring(0, start) + snippet + current.substring(end);
       textarea.focus();
     }
@@ -1614,7 +1616,7 @@ export function getWebHtml(): string {
         });
         const data = await res.json();
         const textarea = document.getElementById('chatPromptInput');
-        textarea.value += `\\n[File: ${filePath}]\\n` + data.content + `\\n`;
+        textarea.value += '\n[File: ' + filePath + ']\n' + data.content + '\n';
         closeAllModals();
         textarea.focus();
       } catch {}
