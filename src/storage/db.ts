@@ -3,6 +3,7 @@ import path from 'node:path';
 import os from 'node:os';
 import fs from 'node:fs';
 import type { EncryptedSecretRecord, StoredSecretMeta } from '../security/vault.js';
+import type { VirtualApiKeyRecord } from '../security/rbac.js';
 
 export interface ProviderProfileRecord {
   id: string;
@@ -204,6 +205,27 @@ export class StorageDatabase {
         value TEXT NOT NULL,
         updated_at TEXT NOT NULL
       );
+    `);
+
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS virtual_api_keys (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        key_hash TEXT UNIQUE NOT NULL,
+        prefix TEXT NOT NULL,
+        role TEXT NOT NULL,
+        scopes_json TEXT NOT NULL,
+        allowed_models_json TEXT NOT NULL,
+        rate_limit_rpm INTEGER,
+        daily_token_budget INTEGER,
+        tokens_used_today INTEGER NOT NULL DEFAULT 0,
+        budget_reset_date TEXT NOT NULL,
+        is_active INTEGER NOT NULL DEFAULT 1,
+        expires_at TEXT,
+        created_at TEXT NOT NULL,
+        last_used_at TEXT
+      );
+      CREATE INDEX IF NOT EXISTS idx_vkeys_hash ON virtual_api_keys(key_hash);
     `);
 
     this.seedDefaultPresets();
@@ -870,6 +892,110 @@ export class StorageDatabase {
     const stmt = this.db.prepare(`SELECT value FROM app_config WHERE key = ?`);
     const row = stmt.get(key) as Record<string, unknown> | undefined;
     return row ? (row.value as string) : null;
+  }
+
+  public saveVirtualKey(record: VirtualApiKeyRecord): void {
+    const stmt = this.db.prepare(`
+      INSERT OR REPLACE INTO virtual_api_keys (
+        id, name, key_hash, prefix, role, scopes_json, allowed_models_json,
+        rate_limit_rpm, daily_token_budget, tokens_used_today, budget_reset_date,
+        is_active, expires_at, created_at, last_used_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+    stmt.run(
+      record.id,
+      record.name,
+      record.keyHash,
+      record.prefix,
+      record.role,
+      JSON.stringify(record.scopes),
+      JSON.stringify(record.allowedModels),
+      record.rateLimitRpm ?? null,
+      record.dailyTokenBudget ?? null,
+      record.tokensUsedToday ?? 0,
+      record.budgetResetDate,
+      record.isActive ? 1 : 0,
+      record.expiresAt ?? null,
+      record.createdAt,
+      record.lastUsedAt ?? null
+    );
+  }
+
+  public getVirtualKeyByHash(keyHash: string): VirtualApiKeyRecord | null {
+    const stmt = this.db.prepare(`SELECT * FROM virtual_api_keys WHERE key_hash = ?`);
+    const row = stmt.get(keyHash) as Record<string, unknown> | undefined;
+    return row ? this.mapVirtualKeyRow(row) : null;
+  }
+
+  public getVirtualKeyById(id: string): VirtualApiKeyRecord | null {
+    const stmt = this.db.prepare(`SELECT * FROM virtual_api_keys WHERE id = ?`);
+    const row = stmt.get(id) as Record<string, unknown> | undefined;
+    return row ? this.mapVirtualKeyRow(row) : null;
+  }
+
+  public listVirtualKeys(): VirtualApiKeyRecord[] {
+    const stmt = this.db.prepare(`SELECT * FROM virtual_api_keys ORDER BY created_at DESC`);
+    const rows = stmt.all() as Record<string, unknown>[];
+    return rows.map((r) => this.mapVirtualKeyRow(r));
+  }
+
+  public deleteVirtualKey(id: string): void {
+    const stmt = this.db.prepare(`DELETE FROM virtual_api_keys WHERE id = ?`);
+    stmt.run(id);
+  }
+
+  public recordVirtualKeyUsage(id: string, tokensUsed: number): void {
+    const key = this.getVirtualKeyById(id);
+    if (!key) return;
+
+    const todayStr = new Date().toISOString().split('T')[0];
+    let usedToday = key.tokensUsedToday;
+    if (key.budgetResetDate !== todayStr) {
+      usedToday = tokensUsed;
+    } else {
+      usedToday += tokensUsed;
+    }
+
+    const stmt = this.db.prepare(`
+      UPDATE virtual_api_keys
+      SET tokens_used_today = ?, budget_reset_date = ?, last_used_at = ?
+      WHERE id = ?
+    `);
+    stmt.run(usedToday, todayStr, new Date().toISOString(), id);
+  }
+
+  private mapVirtualKeyRow(row: Record<string, unknown>): VirtualApiKeyRecord {
+    let scopes: string[] = [];
+    try {
+      scopes = JSON.parse((row.scopes_json as string) || '[]');
+    } catch {
+      scopes = [];
+    }
+
+    let allowedModels: string[] = [];
+    try {
+      allowedModels = JSON.parse((row.allowed_models_json as string) || '["*"]');
+    } catch {
+      allowedModels = ['*'];
+    }
+
+    return {
+      id: row.id as string,
+      name: row.name as string,
+      keyHash: row.key_hash as string,
+      prefix: row.prefix as string,
+      role: row.role as any,
+      scopes,
+      allowedModels,
+      rateLimitRpm: row.rate_limit_rpm !== null ? Number(row.rate_limit_rpm) : undefined,
+      dailyTokenBudget: row.daily_token_budget !== null ? Number(row.daily_token_budget) : undefined,
+      tokensUsedToday: Number(row.tokens_used_today || 0),
+      budgetResetDate: (row.budget_reset_date as string) || new Date().toISOString().split('T')[0],
+      isActive: Boolean(row.is_active),
+      expiresAt: (row.expires_at as string) || undefined,
+      createdAt: row.created_at as string,
+      lastUsedAt: (row.last_used_at as string) || undefined,
+    };
   }
 
   public close(): void {

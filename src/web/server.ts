@@ -9,16 +9,103 @@ import { SystemDoctor } from '../core/doctor.js';
 import { OpenKeyAgent } from '../core/agent.js';
 import { sanitizeData, sanitizeText } from '../core/sanitizer.js';
 import { UpdateManager } from '../core/updater.js';
+import { ModelCircuitBreaker } from '../gateway/circuit_breaker.js';
+import { UnifiedToolsAdapter } from '../gateway/tools_adapter.js';
+import { AdaptiveContextCompressor } from '../gateway/context_compressor.js';
+import { RbacManager, type VirtualApiKeyRecord, type UserRole } from '../security/rbac.js';
+import { MTLSService, type MTLSConfig } from '../security/mtls.js';
 import path from 'node:path';
 
-export function createWebServer(): Hono {
-  const app = new Hono();
-  const db = new StorageDatabase();
+export interface WebServerOptions {
+  circuitBreaker?: ModelCircuitBreaker;
+  rbacManager?: RbacManager;
+  db?: StorageDatabase;
+}
+
+export function createWebServer(options: WebServerOptions = {}): Hono {
+  const app = new Hono<{ Variables: { virtualKey?: VirtualApiKeyRecord } }>();
+  const db = options.db || new StorageDatabase();
   const vault = new SecretVault();
   const configManager = new ConfigManager(db);
   const registry = new ProviderRegistry(configManager, db, vault);
   const agent = new OpenKeyAgent({ db, configManager, registry });
   const doctor = new SystemDoctor();
+  const circuitBreaker = options.circuitBreaker || new ModelCircuitBreaker({ failureThreshold: 3, cooldownMs: 30000 });
+  const rbacManager = options.rbacManager || new RbacManager();
+
+  // RBAC Authentication middleware for /v1 routes
+  app.use('/v1/*', async (c, next) => {
+    const virtualKeys = db.listVirtualKeys();
+    // If no virtual keys exist in DB, gateway operates in open local mode
+    if (virtualKeys.length === 0) {
+      await next();
+      return;
+    }
+
+    const authHeader = c.req.header('authorization') || c.req.header('Authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return c.json(
+        { error: { message: 'Missing Bearer token for OpenKey Virtual Gateway', type: 'authentication_error' } },
+        401
+      );
+    }
+
+    const rawKey = authHeader.replace(/^Bearer\s+/i, '').trim();
+    const keyHash = RbacManager.hashKey(rawKey);
+    const keyRecord = db.getVirtualKeyByHash(keyHash);
+
+    if (!keyRecord || !keyRecord.isActive) {
+      return c.json(
+        { error: { message: 'Invalid or inactive Virtual API Key', type: 'authentication_error' } },
+        401
+      );
+    }
+
+    if (RbacManager.isExpired(keyRecord)) {
+      return c.json(
+        { error: { message: 'Virtual API Key has expired', type: 'authentication_error' } },
+        401
+      );
+    }
+
+    const reqPath = c.req.path;
+    const requiredScope = reqPath.includes('/chat/completions')
+      ? 'chat:completions'
+      : reqPath.includes('/models')
+      ? 'models:read'
+      : 'chat:completions';
+
+    if (!RbacManager.hasScope(keyRecord, requiredScope)) {
+      return c.json(
+        { error: { message: `Key missing required scope '${requiredScope}'`, type: 'permission_error' } },
+        403
+      );
+    }
+
+    const rateCheck = rbacManager.checkRateLimit(keyRecord);
+    if (!rateCheck.allowed) {
+      return c.json(
+        {
+          error: {
+            message: `Rate limit exceeded. Retry after ${rateCheck.retryAfterSeconds}s`,
+            type: 'rate_limit_error',
+          },
+        },
+        429
+      );
+    }
+
+    const budgetCheck = RbacManager.checkTokenBudget(keyRecord);
+    if (!budgetCheck.allowed) {
+      return c.json(
+        { error: { message: 'Daily token budget exhausted for this key', type: 'budget_exceeded_error' } },
+        429
+      );
+    }
+
+    c.set('virtualKey', keyRecord);
+    await next();
+  });
 
   app.get('/', (c) => {
     return c.html(getWebHtml());
@@ -299,17 +386,98 @@ export function createWebServer(): Hono {
       const body = await c.req.json<{
         model?: string;
         messages: Array<{ role: 'system' | 'user' | 'assistant' | 'tool'; content: string }>;
+        tools?: unknown[];
+        tool_choice?: unknown;
         stream?: boolean;
         temperature?: number;
         max_tokens?: number;
+        compress_context?: boolean;
+        max_context_tokens?: number;
+        preserve_recent_turns?: number;
       }>();
 
       if (!body.messages || !Array.isArray(body.messages) || body.messages.length === 0) {
-        return c.json({ error: { message: 'messages is required and must be a non-empty array', type: 'invalid_request_error' } }, 400);
+        return c.json(
+          { error: { message: 'messages is required and must be a non-empty array', type: 'invalid_request_error' } },
+          400
+        );
       }
 
       const requestedModel = body.model || 'coding';
+
+      // RBAC Model Restriction check
+      const vKey = c.get('virtualKey');
+      if (vKey && !RbacManager.isModelAllowed(vKey, requestedModel)) {
+        return c.json(
+          {
+            error: {
+              message: `Model '${requestedModel}' is not allowed for this Virtual API Key`,
+              type: 'permission_error',
+            },
+          },
+          403
+        );
+      }
+
       const resolved = registry.resolvePresetOrModel(requestedModel);
+
+      if (vKey && !RbacManager.isModelAllowed(vKey, resolved.modelId)) {
+        return c.json(
+          {
+            error: {
+              message: `Resolved model '${resolved.modelId}' is not allowed for this Virtual API Key`,
+              type: 'permission_error',
+            },
+          },
+          403
+        );
+      }
+
+      // Circuit Breaker State Check
+      const cbState = circuitBreaker.getState(resolved.providerId, resolved.modelId);
+      if (cbState === 'OPEN') {
+        const status = circuitBreaker.getStatus(resolved.providerId, resolved.modelId);
+        const retryAfterSeconds = status.nextAttemptTime
+          ? Math.max(1, Math.ceil((status.nextAttemptTime - Date.now()) / 1000))
+          : 30;
+        return c.json(
+          {
+            error: {
+              message: `[Circuit Breaker OPEN] Model ${resolved.providerId}:${resolved.modelId} is cooling down due to repeated failures. Retry after ${retryAfterSeconds}s.`,
+              type: 'circuit_breaker_open',
+              retryAfterSeconds,
+            },
+          },
+          503
+        );
+      }
+
+      // Adaptive Context Compression
+      let messagesToSend = body.messages.map((m) => ({
+        role: m.role as 'system' | 'user' | 'assistant' | 'tool',
+        content: m.content,
+      }));
+
+      const shouldCompress =
+        body.compress_context === true || c.req.header('x-compress-context') === 'true';
+      let compressionStats: import('../gateway/context_compressor.js').CompressionStats | null = null;
+
+      if (shouldCompress) {
+        const compResult = AdaptiveContextCompressor.compress(messagesToSend, {
+          maxTokens: body.max_context_tokens || 8000,
+          preserveRecentCount: body.preserve_recent_turns || 4,
+          compactIntermediateToolResults: true,
+        });
+        if (compResult.isCompressed) {
+          messagesToSend = compResult.messages;
+          compressionStats = compResult.stats;
+        }
+      }
+
+      // Unified Tools translation
+      const unifiedTools =
+        body.tools && Array.isArray(body.tools) ? UnifiedToolsAdapter.toUnifiedTools(body.tools) : undefined;
+
       const adapter = registry.getAdapter(resolved.providerId);
       const creds = await registry.getCredentials(resolved.providerId);
 
@@ -324,7 +492,8 @@ export function createWebServer(): Hono {
               for await (const chunk of adapter.chatStream(
                 {
                   modelId: resolved.modelId,
-                  messages: body.messages,
+                  messages: messagesToSend,
+                  tools: unifiedTools,
                   temperature: body.temperature,
                   maxTokens: body.max_tokens,
                 },
@@ -347,6 +516,8 @@ export function createWebServer(): Hono {
                   controller.enqueue(encoder.encode(`data: ${JSON.stringify(dataPayload)}\n\n`));
                 }
               }
+
+              circuitBreaker.recordSuccess(resolved.providerId, resolved.modelId);
 
               const donePayload = {
                 id: chunkId,
@@ -376,6 +547,7 @@ export function createWebServer(): Hono {
                 status: 'success',
               });
             } catch (err: unknown) {
+              circuitBreaker.recordFailure(resolved.providerId, resolved.modelId);
               const msg = err instanceof Error ? err.message : String(err);
               const errPayload = {
                 error: {
@@ -402,14 +574,17 @@ export function createWebServer(): Hono {
         });
       }
 
-      const response = await adapter.chat(
-        {
-          modelId: resolved.modelId,
-          messages: body.messages,
-          temperature: body.temperature,
-          maxTokens: body.max_tokens,
-        },
-        creds
+      const response = await circuitBreaker.execute(resolved.providerId, resolved.modelId, () =>
+        adapter.chat(
+          {
+            modelId: resolved.modelId,
+            messages: messagesToSend,
+            tools: unifiedTools,
+            temperature: body.temperature,
+            maxTokens: body.max_tokens,
+          },
+          creds
+        )
       );
 
       const durationMs = Date.now() - start;
@@ -428,33 +603,83 @@ export function createWebServer(): Hono {
         status: 'success',
       });
 
-      return c.json({
-        id: `chatcmpl-${Date.now()}`,
-        object: 'chat.completion',
-        created: Math.floor(Date.now() / 1000),
-        model: requestedModel,
-        resolvedModel: {
-          providerId: resolved.providerId,
-          modelId: resolved.modelId,
-          presetAlias: resolved.presetAlias,
-        },
-        choices: [
-          {
-            index: 0,
-            message: {
-              role: 'assistant',
-              content: response.message.content,
-            },
-            finish_reason: response.finishReason || 'stop',
+      if (vKey) {
+        db.recordVirtualKeyUsage(vKey.id, totalTokens);
+      }
+
+      let toolCalls = response.message.toolCalls;
+      if ((!toolCalls || toolCalls.length === 0) && response.message.content && typeof response.message.content !== 'string') {
+        toolCalls = UnifiedToolsAdapter.normalizeToolCalls(resolved.providerId, response.message);
+      }
+
+      const choiceMessage: {
+        role: string;
+        content: string | null;
+        tool_calls?: Array<{ id: string; type: 'function'; function: { name: string; arguments: string } }>;
+      } = {
+        role: 'assistant',
+        content: typeof response.message.content === 'string' ? response.message.content : null,
+      };
+
+      if (toolCalls && toolCalls.length > 0) {
+        choiceMessage.tool_calls = toolCalls.map((tc) => ({
+          id: tc.id,
+          type: 'function',
+          function: {
+            name: tc.name,
+            arguments: typeof tc.arguments === 'string' ? tc.arguments : JSON.stringify(tc.arguments),
           },
-        ],
-        usage: {
-          prompt_tokens: inputTokens,
-          completion_tokens: outputTokens,
-          total_tokens: totalTokens,
+        }));
+      }
+
+      const resHeaders: Record<string, string> = {};
+      if (compressionStats) {
+        resHeaders['x-openkey-compressed'] = 'true';
+        resHeaders['x-tokens-saved'] = String(compressionStats.tokensSaved);
+      }
+
+      return c.json(
+        {
+          id: `chatcmpl-${Date.now()}`,
+          object: 'chat.completion',
+          created: Math.floor(Date.now() / 1000),
+          model: requestedModel,
+          resolvedModel: {
+            providerId: resolved.providerId,
+            modelId: resolved.modelId,
+            presetAlias: resolved.presetAlias,
+          },
+          choices: [
+            {
+              index: 0,
+              message: choiceMessage,
+              finish_reason: toolCalls && toolCalls.length > 0 ? 'tool_calls' : response.finishReason || 'stop',
+            },
+          ],
+          usage: {
+            prompt_tokens: inputTokens,
+            completion_tokens: outputTokens,
+            total_tokens: totalTokens,
+          },
+          ...(compressionStats ? { context_compression: compressionStats } : {}),
         },
-      });
+        200,
+        resHeaders
+      );
     } catch (err: unknown) {
+      if (err instanceof CircuitBreakerOpenError) {
+        const remaining = Math.max(1, Math.ceil(err.cooldownRemainingMs / 1000));
+        return c.json(
+          {
+            error: {
+              message: err.message,
+              type: 'circuit_breaker_open',
+              retryAfterSeconds: remaining,
+            },
+          },
+          503
+        );
+      }
       const msg = err instanceof Error ? err.message : String(err);
       return c.json(
         {
