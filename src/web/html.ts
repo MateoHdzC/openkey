@@ -1505,7 +1505,7 @@ export function getWebHtml(): string {
     function populateKeyProviderDropdowns() {
       const select = document.getElementById('addKeyProviderSelect');
       if (!select) return;
-      select.innerHTML = catalog.map(p => `<option value="${escapeHtml(p.id)}">${escapeHtml(p.name)} (${escapeHtml(p.id)})</option>`).join('');
+      select.innerHTML = catalog.map(p => '<option value="' + escapeHtml(p.id) + '">' + escapeHtml(p.name) + ' (' + escapeHtml(p.id) + ')</option>').join('');
     }
 
     function updateHeaderAndMetadata() {
@@ -1548,7 +1548,7 @@ export function getWebHtml(): string {
       reader.onload = (event) => {
         const content = event.target?.result;
         const textarea = document.getElementById('chatPromptInput');
-        textarea.value += `\\n[Attached: ${file.name}]\\n` + content + `\\n`;
+        textarea.value += '\n[Attached: ' + file.name + ']\n' + content + '\n';
         textarea.focus();
       };
       reader.readAsText(file);
@@ -1568,8 +1568,7 @@ export function getWebHtml(): string {
       const textarea = document.getElementById('chatPromptInput');
       const start = textarea.selectionStart || 0;
       const end = textarea.selectionEnd || 0;
-      const current = textarea.value;
-      const snippet = "\\n```typescript\\n// code here\\n```\\n";
+      const snippet = '\n' + '```' + 'typescript\n// code here\n' + '```' + '\n';
       textarea.value = current.substring(0, start) + snippet + current.substring(end);
       textarea.focus();
     }

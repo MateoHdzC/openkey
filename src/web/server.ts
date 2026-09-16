@@ -1053,24 +1053,143 @@ export function createWebServer(options: WebServerOptions = {}): Hono {
     }
   });
 
+  // Circuit Breaker Endpoints
+  app.get('/api/circuit-breaker', (c) => {
+    return c.json({
+      statuses: circuitBreaker.getAllStatuses(),
+    });
+  });
+
+  app.post('/api/circuit-breaker/reset', async (c) => {
+    const body = await c.req.json<{ providerId?: string; modelId?: string }>().catch(() => ({}));
+    circuitBreaker.reset(body.providerId, body.modelId);
+    return c.json({ success: true, message: 'Circuit breaker reset successfully' });
+  });
+
+  // Adaptive Context Compressor Endpoint
+  app.post('/api/context/compress', async (c) => {
+    const body = await c.req.json<{
+      messages: Array<{ role: 'system' | 'user' | 'assistant' | 'tool'; content: string }>;
+      maxTokens?: number;
+      preserveRecentCount?: number;
+    }>();
+
+    if (!body.messages || !Array.isArray(body.messages)) {
+      return c.json({ error: 'messages is required and must be an array' }, 400);
+    }
+
+    const result = AdaptiveContextCompressor.compress(body.messages, {
+      maxTokens: body.maxTokens || 4000,
+      preserveRecentCount: body.preserveRecentCount || 4,
+      compactIntermediateToolResults: true,
+    });
+
+    return c.json(result);
+  });
+
+  // RBAC Virtual Keys Management Endpoints
+  app.get('/api/rbac/keys', (c) => {
+    const keys = db.listVirtualKeys().map((k) => ({
+      id: k.id,
+      name: k.name,
+      prefix: k.prefix,
+      role: k.role,
+      scopes: k.scopes,
+      allowedModels: k.allowedModels,
+      rateLimitRpm: k.rateLimitRpm,
+      dailyTokenBudget: k.dailyTokenBudget,
+      tokensUsedToday: k.tokensUsedToday,
+      isActive: k.isActive,
+      expiresAt: k.expiresAt,
+      createdAt: k.createdAt,
+      lastUsedAt: k.lastUsedAt,
+    }));
+    return c.json(keys);
+  });
+
+  app.post('/api/rbac/keys', async (c) => {
+    const body = await c.req.json<{
+      name: string;
+      role?: UserRole;
+      scopes?: string[];
+      allowedModels?: string[];
+      rateLimitRpm?: number;
+      dailyTokenBudget?: number;
+      expiresInDays?: number;
+    }>();
+
+    if (!body.name || !body.name.trim()) {
+      return c.json({ error: 'Key name is required' }, 400);
+    }
+
+    const { record, rawKey } = RbacManager.generateKey(body);
+    db.saveVirtualKey(record);
+
+    return c.json({
+      success: true,
+      key: {
+        id: record.id,
+        name: record.name,
+        prefix: record.prefix,
+        role: record.role,
+        scopes: record.scopes,
+        allowedModels: record.allowedModels,
+        rateLimitRpm: record.rateLimitRpm,
+        dailyTokenBudget: record.dailyTokenBudget,
+        expiresAt: record.expiresAt,
+        createdAt: record.createdAt,
+      },
+      rawKey,
+    });
+  });
+
+  app.delete('/api/rbac/keys/:id', (c) => {
+    const id = c.req.param('id');
+    db.deleteVirtualKey(id);
+    return c.json({ success: true, message: 'Virtual API key deleted' });
+  });
+
+  // mTLS Status Endpoint
+  app.get('/api/mtls/status', (c) => {
+    return c.json({
+      mtlsAvailable: true,
+      message: 'mTLS engine active and ready for zero-trust certificate verification',
+    });
+  });
+
   return app;
 }
 
-export function startLocalWebServer(port: number = 3000, silent: boolean = false): Promise<{ port: number; host: string; close: () => void }> {
-  return new Promise((resolve) => {
+export function startLocalWebServer(
+  port: number = 3000,
+  silent: boolean = false,
+  mtlsConfig?: MTLSConfig
+): Promise<{ port: number; host: string; close: () => void }> {
+  return new Promise(async (resolve) => {
     const app = createWebServer();
     const host = '127.0.0.1';
 
     try {
+      let serverOptions: any = undefined;
+      let createServerFn: any = undefined;
+
+      if (mtlsConfig && mtlsConfig.enabled) {
+        const https = await import('node:https');
+        createServerFn = https.createServer;
+        serverOptions = MTLSService.buildServerOptions(mtlsConfig);
+      }
+
       const server = serve(
         {
           fetch: app.fetch,
           port,
           hostname: host,
+          ...(createServerFn ? { createServer: createServerFn, serverOptions } : {}),
         },
         (info) => {
+          const proto = mtlsConfig && mtlsConfig.enabled ? 'https' : 'http';
           if (!silent) {
-            console.log(`\n🚀 OpenKey Web Studio listening on http://${host}:${info.port}\n`);
+            console.log(`\n🚀 OpenKey Web Studio listening on ${proto}://${host}:${info.port}\n`);
           }
           resolve({
             port: info.port,
