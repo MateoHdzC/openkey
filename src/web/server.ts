@@ -9,7 +9,7 @@ import { SystemDoctor } from '../core/doctor.js';
 import { OpenKeyAgent } from '../core/agent.js';
 import { sanitizeData, sanitizeText } from '../core/sanitizer.js';
 import { UpdateManager } from '../core/updater.js';
-import { ModelCircuitBreaker } from '../gateway/circuit_breaker.js';
+import { ModelCircuitBreaker, CircuitBreakerOpenError } from '../gateway/circuit_breaker.js';
 import { UnifiedToolsAdapter } from '../gateway/tools_adapter.js';
 import { AdaptiveContextCompressor } from '../gateway/context_compressor.js';
 import { RbacManager, type VirtualApiKeyRecord, type UserRole } from '../security/rbac.js';
@@ -23,7 +23,7 @@ export interface WebServerOptions {
 }
 
 export function createWebServer(options: WebServerOptions = {}): Hono {
-  const app = new Hono<{ Variables: { virtualKey?: VirtualApiKeyRecord } }>();
+  const app = new Hono();
   const db = options.db || new StorageDatabase();
   const vault = new SecretVault();
   const configManager = new ConfigManager(db);
@@ -103,7 +103,7 @@ export function createWebServer(options: WebServerOptions = {}): Hono {
       );
     }
 
-    c.set('virtualKey', keyRecord);
+    (c as any).set('virtualKey', keyRecord);
     await next();
   });
 
@@ -406,7 +406,7 @@ export function createWebServer(options: WebServerOptions = {}): Hono {
       const requestedModel = body.model || 'coding';
 
       // RBAC Model Restriction check
-      const vKey = c.get('virtualKey');
+      const vKey = (c as any).get('virtualKey') as VirtualApiKeyRecord | undefined;
       if (vKey && !RbacManager.isModelAllowed(vKey, requestedModel)) {
         return c.json(
           {
@@ -453,7 +453,7 @@ export function createWebServer(options: WebServerOptions = {}): Hono {
       }
 
       // Adaptive Context Compression
-      let messagesToSend = body.messages.map((m) => ({
+      let messagesToSend: import('../providers/adapter.interface.js').ChatMessage[] = body.messages.map((m) => ({
         role: m.role as 'system' | 'user' | 'assistant' | 'tool',
         content: m.content,
       }));
@@ -1061,7 +1061,9 @@ export function createWebServer(options: WebServerOptions = {}): Hono {
   });
 
   app.post('/api/circuit-breaker/reset', async (c) => {
-    const body = await c.req.json<{ providerId?: string; modelId?: string }>().catch(() => ({}));
+    const body = await c.req
+      .json<{ providerId?: string; modelId?: string }>()
+      .catch(() => ({} as { providerId?: string; modelId?: string }));
     circuitBreaker.reset(body.providerId, body.modelId);
     return c.json({ success: true, message: 'Circuit breaker reset successfully' });
   });
